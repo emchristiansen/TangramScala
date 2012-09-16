@@ -4,11 +4,13 @@ import Render.UpdateWallpaper
 
 object FindNoneStrategy {
   def full: UpdateWallpaper = (wallpaper, images) => {
+    val asdf = wallpaper.pixels.iterator
+
     val firstNoneLocation = {
       val locations = for (
-      (row, y) <- wallpaper.pixels.view.zipWithIndex;
-      (None, x) <- row.view.zipWithIndex) yield (x, y)
-      
+        ((y, x), None) <- wallpaper.pixels.iterator.toSeq
+      ) yield (x, y)
+
       locations.headOption
     }
 
@@ -16,11 +18,11 @@ object FindNoneStrategy {
       case Some((x, y)) => {
         val UnusedImage(headImage, _) #:: tailImages = images
         val newWallpaper = wallpaper.insert(
-          ResizedImage(headImage, headImage.getWidth, headImage.getHeight), 
+          ResizedImage(headImage, headImage.getWidth, headImage.getHeight),
           Position(x, y))
         full(newWallpaper, tailImages)
       }
       case None => (wallpaper, images)
     }
-  }  
+  }
 }

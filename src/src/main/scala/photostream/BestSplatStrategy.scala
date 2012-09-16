@@ -1,43 +1,23 @@
 package photostream
 
-import scala.Array.canBuildFrom
-
-import org.apache.commons.math3.linear.Array2DRowRealMatrix
-import org.apache.commons.math3.linear.DefaultRealMatrixChangingVisitor
-
 import Render.UpdateWallpaper
 
 object BestSplatStrategy {
   def single: UpdateWallpaper = (wallpaper, images) => {
-    def agePunishmentFunction(age: Double): Double = math.pow(2, age)
+    def agePunishmentFunction(age: Int): Double = math.pow(2, age)
 
     val middleWeight = 4
 
-    val insertionTimes = {
-      val data = for (
-        row <- wallpaper.pixels.toArray
-      ) yield for (
-        pixel <- row.toArray) yield pixel match {
-        case Some(WallpaperPixel(_, _, insertionTime)) => insertionTime.toDouble
-        case None => 0.toDouble
-      }
-      new Array2DRowRealMatrix(data)
-    }
+    val insertionTimes = wallpaper.pixels.map({
+      case Some(WallpaperPixel(_, _, insertionTime)) => insertionTime
+      case None => 0
+    })
 
     val ageArray = {
-      val ages = 
-        insertionTimes.scalarAdd(-wallpaper.lastInsertionTime).scalarMultiply(-1)
-      
-      // Crummy Java makes it hard to map over collections.
-      val exponentiator = new DefaultRealMatrixChangingVisitor {
-        override def visit(row: Int, column: Int, value: Double): Double = {
-          agePunishmentFunction(value)
-        }
-      }      
-      ages.walkInOptimizedOrder(exponentiator)
-      ages
+      val ages = (insertionTimes - wallpaper.lastInsertionTime) * (-1)
+      ages.map(agePunishmentFunction)
     }
-    
+
     val UnusedImage(image, _) #:: tailImages = images
 
     val integralImage = IntegralImage(ageArray)
@@ -46,7 +26,8 @@ object BestSplatStrategy {
 
     val insertionScores = for (
       y <- 0 until wallpaper.height;
-      x <- 0 until wallpaper.width) yield {
+      x <- 0 until wallpaper.width
+    ) yield {
       val yEnd = (y + image.getHeight).min(wallpaper.height)
       val xEnd = (x + image.getWidth).min(wallpaper.width)
 
@@ -62,7 +43,7 @@ object BestSplatStrategy {
           x + xQuarter,
           xEnd - xQuarter)
       }
-            
+
       InsertionScore(x, y, wholeScore + middleWeight * middleScore)
     }
 
@@ -72,5 +53,5 @@ object BestSplatStrategy {
       ResizedImage(image, image.getWidth, image.getHeight),
       Position(highestScore.x, highestScore.y))
     (newWallpaper, tailImages)
-  }  
+  }
 }

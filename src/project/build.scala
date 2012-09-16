@@ -4,7 +4,7 @@ import Keys._
 import sbtassembly.Plugin._
 import AssemblyKeys._
 
-object ThisBuild extends Build {
+object MainBuild extends Build {
   def extraResolvers = Seq(
     resolvers ++= Seq(
       "NativeLibs4Java Respository" at "http://nativelibs4java.sourceforge.net/maven/",
@@ -26,7 +26,11 @@ object ThisBuild extends Build {
       "org.scala-tools" %% "scala-stm" % "0.6",
       "net.liftweb" % "lift-json_2.9.1" % "2.4-RC1",
       "nebula_native_experimental" %% "nebula_native_experimental" % "0.1-SNAPSHOT",
-      "com.twitter" % "util-eval" % "5.3.6"
+      "com.twitter" % "util-eval" % "5.3.6",
+      "org.scalanlp" %% "breeze-math" % "0.1",
+      "org.scalanlp" %% "breeze-learn" % "0.1",
+      "org.scalanlp" %% "breeze-process" % "0.1",
+      "org.scalanlp" %% "breeze-viz" % "0.1"
     )
   )
 
