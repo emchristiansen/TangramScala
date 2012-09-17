@@ -1,8 +1,12 @@
 package photostream
 
-import Render.UpdateWallpaper
+import Run.UpdateWallpaper
+import java.awt.Color
+
 
 object BestSplatStrategy {
+  val border = ImageBorder(2, Color.black)
+  
   def single: UpdateWallpaper = (wallpaper, images) => {
     def agePunishmentFunction(age: Int): Double = math.pow(2, age)
 
@@ -50,7 +54,9 @@ object BestSplatStrategy {
     val highestScore = insertionScores.maxBy(_.score)
     println(highestScore)
     val newWallpaper = wallpaper.insert(
-      ResizedImage(image, image.getWidth, image.getHeight),
+      BorderedResizedImage(
+        border,
+        ResizedImage(image, image.getWidth, image.getHeight)),
       Position(highestScore.x, highestScore.y))
     (newWallpaper, tailImages)
   }

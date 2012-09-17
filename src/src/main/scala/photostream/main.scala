@@ -12,6 +12,8 @@ import scala.annotation.tailrec
 import breeze.linalg.DenseMatrix
 import javax.imageio.ImageIO
 
+case class ImageBorder(val borderWidth: Int, val color: Color)
+
 case class ResizedImage(
   val originalImage: BufferedImage,
   val width: Int,
@@ -34,12 +36,23 @@ case class ResizedImage(
   }
 }
 
+case class BorderedResizedImage(val border: ImageBorder, val image: ResizedImage) {
+  val width = 2 * border.borderWidth + image.width
+  val height = 2 * border.borderWidth + image.height  
+  
+  def size: RectangleSize = RectangleSize(width, height)
+  
+  def render: BufferedImage = {
+    Preprocess.addBorder(border.borderWidth, border.color)(image.render)
+  }
+}
+
 case class Position(val x: Int, val y: Int) {
   require(x >= 0)
   require(y >= 0)
 }
 
-case class WallpaperPixel(image: ResizedImage, position: Position, insertionTime: Int)
+case class WallpaperPixel(image: BorderedResizedImage, position: Position, insertionTime: Int)
 
 case class Wallpaper(pixels: DenseMatrix[Option[WallpaperPixel]]) {
   val width = pixels.cols
@@ -81,7 +94,7 @@ case class Wallpaper(pixels: DenseMatrix[Option[WallpaperPixel]]) {
     wallpaper
   }
 
-  def insert(image: ResizedImage, position: Position): Wallpaper = {
+  def insert(image: BorderedResizedImage, position: Position): Wallpaper = {
     val newPixel = WallpaperPixel(image, position, lastInsertionTime + 1)
 
     val cappedXEnd = width.min(position.x + image.width)
@@ -109,7 +122,7 @@ object Wallpaper {
     Wallpaper(pixels)
   }
 
-  def apply(image: ResizedImage): Wallpaper = {
+  def apply(image: BorderedResizedImage): Wallpaper = {
     val wallpaper = Wallpaper(image.width, image.height)
     wallpaper.insert(image, Position(0, 0))
   }
@@ -198,12 +211,12 @@ object PhotoStream {
   }
 }
 
+// TODO: This is adding border prematurely.
 object Preprocess {
   def addBorder(
     borderWidth: Int,
     borderColor: Color)(
-      unusedImage: UnusedImage): UnusedImage = {
-    val UnusedImage(image, numMisses) = unusedImage
+      image: BufferedImage): BufferedImage = {
     val newWidth = image.getWidth + 2 * borderWidth
     val newHeight = image.getHeight + 2 * borderWidth
     val newImage = new BufferedImage(
@@ -214,7 +227,7 @@ object Preprocess {
     graphics.setColor(borderColor)
     graphics.fillRect(0, 0, newWidth, newHeight)
     graphics.drawImage(image, borderWidth, borderWidth, null)
-    UnusedImage(newImage, numMisses)
+    newImage
   }
 }
 
@@ -253,7 +266,7 @@ case class IntegralImage(val matrix: DenseMatrix[Double]) {
 }
 
 // TODO: Rename
-object Render {
+object Run {
   type UpdateWallpaper = (Wallpaper, Stream[UnusedImage]) => Tuple2[Wallpaper, Stream[UnusedImage]]
 
   def updateRunner(
@@ -262,7 +275,7 @@ object Render {
     wallpaper: Wallpaper,
     images: Stream[UnusedImage]) {
 
-    @annotation.tailrec
+    @tailrec
     def refresh(wallpaper: Wallpaper, images: Stream[UnusedImage]) {
       val (newWallpaper, newImages) = updater(wallpaper, images)
       // The updater must do something.
@@ -279,9 +292,8 @@ object Render {
 
 object Main extends App {
   val unusedImages = PhotoStream.getImages
-  val decoratedImages = unusedImages.map(Preprocess.addBorder(1, Color.white))
 
   val wallpaper = Wallpaper(Display.wallpaperWidth, Display.wallpaperHeight)
 
-  Render.updateRunner(40000, RecursiveSplitStrategy.full, wallpaper, decoratedImages)
+  Run.updateRunner(40000, RecursiveSplitStrategy.full, wallpaper, unusedImages)
 }

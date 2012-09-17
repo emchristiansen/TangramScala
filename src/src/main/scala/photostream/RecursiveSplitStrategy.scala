@@ -1,6 +1,7 @@
 package photostream
 
-import Render.UpdateWallpaper
+import Run.UpdateWallpaper
+import java.awt.Color
 
 sealed trait Split
 object HorizontalSplit extends Split
@@ -8,12 +9,12 @@ object VerticalSplit extends Split
 
 sealed trait PartitionTree
 case class PartitionNode(
-  val image: ResizedImage,
+  val image: BorderedResizedImage,
   val split: Split,
   val left: Option[PartitionTree],
   val right: Option[PartitionTree]) extends PartitionTree
 case class PartitionLeaf(
-  val image: ResizedImage) extends PartitionTree
+  val image: BorderedResizedImage) extends PartitionTree
 
 case class RectangleSize(width: Int, height: Int) {
   require(width > 0 && height > 0)
@@ -21,22 +22,15 @@ case class RectangleSize(width: Int, height: Int) {
 
 object PartitionTree {
   def size(tree: PartitionTree): RectangleSize = tree match {
-    case PartitionLeaf(ResizedImage(_, width, height)) =>
-      RectangleSize(width, height)
+    case PartitionLeaf(image) => image.size
     case PartitionNode(
-      ResizedImage(_, width, height),
+      image,
       _,
       left,
       right) => {
-      val extraWidth = right match {
-        case None => 0
-        case Some(tree) => size(tree).width
-      }
-      val extraHeight = left match {
-        case None => 0
-        case Some(tree) => size(tree).height
-      }
-      RectangleSize(width + extraWidth, height + extraHeight)
+      val extraWidth = right.map(tree => size(tree).width).getOrElse(0)
+      val extraHeight = left.map(tree => size(tree).height).getOrElse(0)
+      RectangleSize(image.width + extraWidth, image.height + extraHeight)
     }
   }
 
@@ -84,13 +78,18 @@ object RecursiveSplitStrategy {
   def breakIntoThirds: SplitRecursive = (partitionSize, images) => {
     require(images.nonEmpty)
 
+    val border = ImageBorder(2, Color.black)
+    
     val minDimension = 300
 
     val UnusedImage(headImage, _) #:: tailImages = images
 
     val RectangleSize(width, height) = partitionSize
     if (width <= minDimension || height <= minDimension) {
-      (PartitionLeaf(ResizedImage(headImage, width, height)), tailImages)
+      (PartitionLeaf(BorderedResizedImage(
+         border,
+         ResizedImage(headImage, width, height))), 
+       tailImages)
     } else {
       val imageAspect = headImage.getWidth.toDouble / headImage.getHeight.toDouble
       val partitionAspect = width.toDouble / height.toDouble
@@ -102,7 +101,9 @@ object RecursiveSplitStrategy {
         val (subtree, remainingImages) =
           breakIntoThirds(RectangleSize(remainingWidth, height), tailImages)
         val tree = PartitionNode(
-          ResizedImage(headImage, rootWidth, height),
+          BorderedResizedImage(
+            border,
+            ResizedImage(headImage, rootWidth, height)),
           HorizontalSplit,
           None,
           Some(subtree))
@@ -115,7 +116,9 @@ object RecursiveSplitStrategy {
         val (subtree, remainingImages) =
           breakIntoThirds(RectangleSize(width, remainingHeight), tailImages)
         val tree = PartitionNode(
-          ResizedImage(headImage, width, rootHeight),
+          BorderedResizedImage(
+            border,
+            ResizedImage(headImage, width, rootHeight)),
           VerticalSplit,
           Some(subtree),
           None)

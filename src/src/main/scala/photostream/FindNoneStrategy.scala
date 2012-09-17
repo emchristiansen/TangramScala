@@ -1,11 +1,12 @@
 package photostream
 
-import Render.UpdateWallpaper
+import Run.UpdateWallpaper
+import java.awt.Color
 
 object FindNoneStrategy {
+  val border = ImageBorder(2, Color.black)
+  
   def full: UpdateWallpaper = (wallpaper, images) => {
-    val asdf = wallpaper.pixels.iterator
-
     val firstNoneLocation = {
       val locations = for (
         ((y, x), None) <- wallpaper.pixels.iterator.toSeq
@@ -18,7 +19,9 @@ object FindNoneStrategy {
       case Some((x, y)) => {
         val UnusedImage(headImage, _) #:: tailImages = images
         val newWallpaper = wallpaper.insert(
-          ResizedImage(headImage, headImage.getWidth, headImage.getHeight),
+          BorderedResizedImage(
+            border,
+            ResizedImage(headImage, headImage.getWidth, headImage.getHeight)),
           Position(x, y))
         full(newWallpaper, tailImages)
       }
