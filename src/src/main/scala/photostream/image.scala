@@ -3,8 +3,28 @@ package photostream
 import java.awt.Color
 import java.awt.image.BufferedImage
 
+trait Monoid[T] {
+  def +(that: T): T
+  def zero: T
+}
+
 case class RectangleSize(width: Int, height: Int) {
   require(width > 0 && height > 0)
+}
+
+object RectangleSize {
+  implicit def implicitMonoid(self: RectangleSize): Monoid[RectangleSize] = new Monoid[RectangleSize] {
+    override def +(that: RectangleSize) = RectangleSize(
+      self.width + that.width,
+      self.height + that.height)
+    override def zero = RectangleSize(0, 0)
+  }
+}
+
+trait RectangleLike {
+  def size: RectangleSize
+  def width = size.width
+  def height = size.height
 }
 
 case class ImageBorder(val borderWidth: Int, val color: Color)
@@ -33,10 +53,10 @@ case class ResizedImage(
 
 case class BorderedResizedImage(val border: ImageBorder, val image: ResizedImage) {
   val width = 2 * border.borderWidth + image.width
-  val height = 2 * border.borderWidth + image.height  
-  
+  val height = 2 * border.borderWidth + image.height
+
   def size: RectangleSize = RectangleSize(width, height)
-  
+
   def render: BufferedImage = {
     Preprocess.addBorder(border.borderWidth, border.color)(image.render)
   }
@@ -44,15 +64,15 @@ case class BorderedResizedImage(val border: ImageBorder, val image: ResizedImage
 
 object BorderedResizedImage {
   def resizeToFit(
-    border: ImageBorder, 
-    finalSize: RectangleSize, 
+    border: ImageBorder,
+    finalSize: RectangleSize,
     image: BufferedImage): BorderedResizedImage = BorderedResizedImage(
-      border,
-      ResizedImage(
-        image,
-        finalSize.width - 2 * border.borderWidth,
-        finalSize.height - 2 * border.borderWidth))
-  
+    border,
+    ResizedImage(
+      image,
+      finalSize.width - 2 * border.borderWidth,
+      finalSize.height - 2 * border.borderWidth))
+
 }
 
 object Preprocess {

@@ -5,7 +5,11 @@ import java.awt.image.BufferedImage
 
 import math.min
 
-case class Position(val x: Int, val y: Int) {
+trait HasWallpaper {
+  def wallpaper: Wallpaper
+}
+
+case class Position(x: Int, y: Int) {
   require(x >= 0)
   require(y >= 0)
 }
@@ -68,9 +72,9 @@ case class Wallpaper(pixels: DenseMatrix[Option[WallpaperPixel]]) {
 
     val patchedPixels = copyMatrix(pixels)
     patchedPixels(
-      position.y until position.y + cappedHeight, 
+      position.y until position.y + cappedHeight,
       position.x until position.x + cappedWidth) :=
-        DenseMatrix.fill[Option[WallpaperPixel]](cappedHeight, cappedWidth)(Some(newPixel))
+      DenseMatrix.fill[Option[WallpaperPixel]](cappedHeight, cappedWidth)(Some(newPixel))
 
     Wallpaper(patchedPixels)
   }

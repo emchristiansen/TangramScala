@@ -65,7 +65,7 @@ object RecursiveSplitStrategy {
     val (partitionTree, remainingImages) = breakIntoThirds(partitionSize, images)
 
     println(partitionTree)
-    println(PartitionTree.size(partitionTree))
+    println(partitionTree.size)
 
     (PartitionTree.render(partitionTree), remainingImages)
   }

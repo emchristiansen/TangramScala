@@ -1,6 +1,8 @@
 package photostream
 
-///////////////////////////////////////////////////////////////////////////////
+import RectangleSize._
+
+///////////////////////////////////////////////////////////
 
 sealed trait Split
 
@@ -8,54 +10,71 @@ object HorizontalSplit extends Split
 
 object VerticalSplit extends Split
 
-///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
 
 sealed trait PartitionTree
 
+case class PartitionLeaf(
+  image: BorderedResizedImage) extends PartitionTree
+
+// TODO: Rename left -> vertical and right -> horizontal
 case class PartitionNode(
-  val image: BorderedResizedImage,
-  val split: Split,
-  val left: Option[PartitionTree],
-  val right: Option[PartitionTree]) extends PartitionTree {
+  leaf: PartitionLeaf,
+  split: Split,
+  left: Option[PartitionTree],
+  right: Option[PartitionTree]) extends PartitionTree {
   // Verify the tree is a legal size.
-  split match {
-    case HorizontalSplit => {
-      left.map()
-      
-    }
+  (left, right, split) match {
+    case (None, None, _) => Unit
+    case (None, Some(right), _) => require(leaf.height == right.height)
+    case (Some(left), None, _) => require(leaf.width == left.width)
+    case (Some(left), Some(right), VerticalSplit) =>
+      require(leaf.height + left.height == right.height)
+    case (Some(left), Some(right), HorizontalSplit) =>
+      require(leaf.width + right.width == left.width)
   }
 }
 
-case class PartitionLeaf(
-  val image: BorderedResizedImage) extends PartitionTree
+///////////////////////////////////////////////////////////
 
 object PartitionTree {
-  def size(tree: PartitionTree): RectangleSize = tree match {
-    case PartitionLeaf(image) => image.size
-    case PartitionNode(
-      image,
-      _,
-      left,
-      right) => {
-      val extraWidth = right.map(tree => size(tree).width).getOrElse(0)
-      val extraHeight = left.map(tree => size(tree).height).getOrElse(0)
-      RectangleSize(image.width + extraWidth, image.height + extraHeight)
+  implicit def implicitRectangleLike(self: PartitionTree): RectangleLike = self match {
+    case self: PartitionLeaf => implicitly[PartitionLeaf => RectangleLike].apply(self)
+    case self: PartitionNode => implicitly[PartitionNode => RectangleLike].apply(self)
+  }
+
+  implicit def implicitHasWallpaper(self: PartitionTree): HasWallpaper = self match {
+    case self: PartitionLeaf => implicitly[PartitionLeaf => HasWallpaper].apply(self)
+    case self: PartitionNode => implicitly[PartitionNode => HasWallpaper].apply(self)
+  }
+}
+
+object PartitionLeaf {
+  implicit def implicitRectangleLike(self: PartitionLeaf): RectangleLike = new RectangleLike {
+    override def size = self.image.size
+  }
+
+  implicit def implicitHasWallpaper(self: PartitionLeaf): HasWallpaper = new HasWallpaper {
+    override def wallpaper = Wallpaper(self.image)
+  }
+}
+
+object PartitionNode {
+  implicit def implicitRectangleLike(self: PartitionNode): RectangleLike = new RectangleLike {
+    override def size = {
+      val extraWidthAndHeight = RectangleSize(
+        self.right.map(_.size.width).getOrElse(0),
+        self.left.map(_.size.height).getOrElse(0))
+
+      self.leaf.size + extraWidthAndHeight
     }
   }
 
-  def render(tree: PartitionTree): Wallpaper = tree match {
-    case PartitionLeaf(image) => {
-      val wallpaper = Wallpaper(image.width, image.height)
-      wallpaper.insert(image, Position(0, 0))
-    }
-    case PartitionNode(
-      image,
-      split,
-      left,
-      right) => {
-      val rootWallpaper = Wallpaper(image)
-      val leftWallpaper = for (l <- left) yield render(l)
-      val rightWallpaper = for (r <- right) yield render(r)
+  implicit def implicitHasWallpaper(self: PartitionNode): HasWallpaper = new HasWallpaper {
+    override def wallpaper = {
+      val leafWallpaper = self.leaf.wallpaper
+      val leftWallpaper = for (left <- self.left) yield left.wallpaper
+      val rightWallpaper = for (right <- self.right) yield right.wallpaper
 
       def horizontal(left: Wallpaper, rightOption: Option[Wallpaper]): Wallpaper = rightOption match {
         case Some(right) => Wallpaper.concatenateHorizontal(left, right)
@@ -67,16 +86,15 @@ object PartitionTree {
         case None => top
       }
 
-      split match {
-        case HorizontalSplit =>
-          vertical(
-            horizontal(rootWallpaper, rightWallpaper),
-            leftWallpaper)
-        case VerticalSplit =>
-          horizontal(
-            vertical(rootWallpaper, leftWallpaper),
-            rightWallpaper)
+      self.split match {
+        case HorizontalSplit => vertical(
+          horizontal(leafWallpaper, rightWallpaper),
+          leftWallpaper)
+        case VerticalSplit => horizontal(
+          vertical(leafWallpaper, leftWallpaper),
+          rightWallpaper)
       }
     }
   }
 }
+

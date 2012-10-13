@@ -11,11 +11,12 @@ object UnusedImage {
 }
 
 object PhotoStream {
+  // TODO: implicit  
   def isImageFile(file: File): Boolean = {
     val extensions = Seq(".png", ".jpg", ".jpeg", ".bmp")
     extensions.map(extension => file.toString.endsWith(extension)).contains(true)
   }
-
+  
   def getImages: Stream[UnusedImage] = {
     val imageDirectory = new File("/u/echristiansen/Dropbox/scala/12Summer/photostream/data")
     assert(imageDirectory.exists)
