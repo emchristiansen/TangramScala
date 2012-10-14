@@ -98,7 +98,18 @@ object Wallpaper {
     val newPixels =
       DenseMatrix.fill[Option[WallpaperPixel]](top.height + bottom.height, top.width)(None)
     newPixels(0 until top.height, ::) := top.pixels
-    newPixels(top.height until newPixels.rows, ::) := bottom.pixels
+
+    val updatedBottomPixels = bottom.pixels.map {
+      case None => None
+      case Some(pixel @ WallpaperPixel(_, position, _)) => {
+        val newPosition = Position(
+          position.x,
+          position.y + top.height)
+        Some(pixel.copy(position = newPosition))
+      }
+    }
+
+    newPixels(top.height until newPixels.rows, ::) := updatedBottomPixels
 
     Wallpaper(newPixels)
   }
@@ -110,8 +121,23 @@ object Wallpaper {
     val newPixels =
       DenseMatrix.fill[Option[WallpaperPixel]](left.height, left.width + right.width)(None)
     newPixels(::, 0 until left.width) := left.pixels
-    newPixels(::, left.width until newPixels.cols) := right.pixels
+
+    val updatedRightPixels = right.pixels.map {
+      case None => None
+      case Some(pixel @ WallpaperPixel(_, position, _)) => {
+        val newPosition = Position(
+          position.x + left.width,
+          position.y)
+        Some(pixel.copy(position = newPosition))
+      }
+    }
+
+    newPixels(::, left.width until newPixels.cols) := updatedRightPixels
 
     Wallpaper(newPixels)
+  }
+
+  implicit def implicitRectangleLike(self: Wallpaper): RectangleLike = new RectangleLike {
+    override def size = RectangleSize(self.pixels.cols, self.pixels.rows)
   }
 }

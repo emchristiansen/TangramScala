@@ -8,16 +8,28 @@ trait Monoid[T] {
   def zero: T
 }
 
+trait SemiVectorSpace[T] extends Monoid[T] {
+  def *(that: Double): T
+}
+
 case class RectangleSize(width: Int, height: Int) {
   require(width > 0 && height > 0)
 }
 
 object RectangleSize {
-  implicit def implicitMonoid(self: RectangleSize): Monoid[RectangleSize] = new Monoid[RectangleSize] {
-    override def +(that: RectangleSize) = RectangleSize(
-      self.width + that.width,
-      self.height + that.height)
-    override def zero = RectangleSize(0, 0)
+  implicit def implicitSemiVectorSpace(self: RectangleSize): SemiVectorSpace[RectangleSize] =
+    new SemiVectorSpace[RectangleSize] {
+      override def +(that: RectangleSize) = RectangleSize(
+        self.width + that.width,
+        self.height + that.height)
+      override def zero = RectangleSize(0, 0)
+      override def *(that: Double) = RectangleSize(
+        (self.width * that).round.toInt,
+        (self.height * that).round.toInt)
+    }
+
+  implicit def implicitRectangleLike(self: RectangleSize): RectangleLike = new RectangleLike {
+    override def size = self
   }
 }
 
@@ -25,14 +37,15 @@ trait RectangleLike {
   def size: RectangleSize
   def width = size.width
   def height = size.height
+  def aspect = size.width.toDouble / size.height.toDouble
 }
 
 case class ImageBorder(val borderWidth: Int, val color: Color)
 
 case class ResizedImage(
-  val originalImage: BufferedImage,
-  val width: Int,
-  val height: Int) {
+  originalImage: BufferedImage,
+  width: Int,
+  height: Int) {
   require(originalImage.getWidth > 0)
   require(originalImage.getHeight > 0)
   require(width > 0)
@@ -51,6 +64,13 @@ case class ResizedImage(
   }
 }
 
+object ResizedImage {
+  def apply(originalImage: BufferedImage): ResizedImage = ResizedImage(
+    originalImage,
+    originalImage.getWidth,
+    originalImage.getHeight)
+}
+
 case class BorderedResizedImage(val border: ImageBorder, val image: ResizedImage) {
   val width = 2 * border.borderWidth + image.width
   val height = 2 * border.borderWidth + image.height
@@ -59,6 +79,12 @@ case class BorderedResizedImage(val border: ImageBorder, val image: ResizedImage
 
   def render: BufferedImage = {
     Preprocess.addBorder(border.borderWidth, border.color)(image.render)
+  }
+
+  def resize(newSize: RectangleSize): BorderedResizedImage = {
+    val newWidth = newSize.width - 2 * border.borderWidth
+    val newHeight = newSize.height - 2 * border.borderWidth
+    copy(image = image.copy(width = newWidth, height = newHeight))
   }
 }
 
@@ -73,6 +99,9 @@ object BorderedResizedImage {
       finalSize.width - 2 * border.borderWidth,
       finalSize.height - 2 * border.borderWidth))
 
+  implicit def implicitRectangleLike(self: BorderedResizedImage): RectangleLike = new RectangleLike {
+    override def size = self.size
+  }
 }
 
 object Preprocess {

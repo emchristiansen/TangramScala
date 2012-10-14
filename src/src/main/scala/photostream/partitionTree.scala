@@ -38,6 +38,9 @@ case class PartitionNode(
 ///////////////////////////////////////////////////////////
 
 object PartitionTree {
+  import PartitionLeaf._
+  import PartitionNode._
+  
   implicit def implicitRectangleLike(self: PartitionTree): RectangleLike = self match {
     case self: PartitionLeaf => implicitly[PartitionLeaf => RectangleLike].apply(self)
     case self: PartitionNode => implicitly[PartitionNode => RectangleLike].apply(self)
@@ -86,7 +89,7 @@ object PartitionNode {
         case None => top
       }
 
-      self.split match {
+      val wallpaper = self.split match {
         case HorizontalSplit => vertical(
           horizontal(leafWallpaper, rightWallpaper),
           leftWallpaper)
@@ -94,6 +97,8 @@ object PartitionNode {
           vertical(leafWallpaper, leftWallpaper),
           rightWallpaper)
       }
+      println(wallpaper.size)
+      wallpaper
     }
   }
 }

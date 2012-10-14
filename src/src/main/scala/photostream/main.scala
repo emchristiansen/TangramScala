@@ -5,5 +5,6 @@ object Main extends App {
 
   val wallpaper = Wallpaper(Display.wallpaperWidth, Display.wallpaperHeight)
 
-  Run.updateRunner(4000, RandomStrategy.single, wallpaper, unusedImages)
+//  Run.updateRunner(4000, RandomStrategy.single, wallpaper, unusedImages)
+  Run.updateRunner(40000, RecursiveSplitStrategy.full, wallpaper, unusedImages)  
 }
