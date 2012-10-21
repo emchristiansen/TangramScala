@@ -13,7 +13,7 @@ trait SemiVectorSpace[T] extends Monoid[T] {
 }
 
 case class RectangleSize(width: Int, height: Int) {
-  require(width > 0 && height > 0)
+  require(width >= 0 && height >= 0)
 }
 
 object RectangleSize {
