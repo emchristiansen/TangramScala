@@ -3,7 +3,7 @@ import org.scalatest.FunSuite
 import java.awt.image.BufferedImage
  
 class TestBlock extends FunSuite {
-  test("make wallpaper from two images") {
+  ignore("make wallpaper from two images") {
     
     val im0 = new BufferedImage(500, 500, BufferedImage.TYPE_BYTE_GRAY)
     val im1 = new BufferedImage(500, 500, BufferedImage.TYPE_BYTE_GRAY)

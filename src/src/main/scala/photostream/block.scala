@@ -249,9 +249,9 @@ object Block {
   def dfsWrapper(
     images: IndexedSeq[BufferedImage])(
       implicit constraintsStream: Stream[Constraints]): Option[Tuple2[Block, IndexedSeq[Block]]] = {
-    def runWithTimeout[T](timeoutMs: Long)(f: => T): Option[T] = {
-      awaitAll(timeoutMs, future(f)).head.asInstanceOf[Option[T]]
-    }
+//    def runWithTimeout[T](timeoutMs: Long)(f: => T): Option[T] = {
+//      awaitAll(timeoutMs, future(f)).head.asInstanceOf[Option[T]]
+//    }
 
     val timeoutMS = 5 * 1000
     val maxAttempts = 8
@@ -261,11 +261,15 @@ object Block {
     // of |runWithTimeout|, the thread may never be killed.
     val parallelism = 1
 
-    val attempts = for (constraints <- constraintsStream.take(maxAttempts)) yield {
+    val attempts = for ((constraints, index) <- constraintsStream.zipWithIndex.take(maxAttempts)) yield {
+      println("Attempt %d".format(index))
       val blocks = images.map(image => BlockLeaf(image)(constraints))
+      val futures = (0 until parallelism).map(_ => future(dfsStrategy(blocks)(constraints)))
       // This |flatten| removes the attempts that timed out.
-      val possibleSolutions = (0 until parallelism).par.map(_ => runWithTimeout(timeoutMS)(
-        dfsStrategy(blocks)(constraints))).toIndexedSeq.flatten
+      val possibleSolutions = 
+        awaitAll(timeoutMS, futures: _*).flatten.map(_.asInstanceOf[Option[Tuple2[Block, IndexedSeq[Block]]]])
+//      val possibleSolutions = (0 until parallelism).par.map(_ => runWithTimeout(timeoutMS)(
+//        dfsStrategy(blocks)(constraints))).toIndexedSeq.flatten
       // This |flatten| removes the attempts that finished in time but failed.
       // We take the first solution if it exists.
       possibleSolutions.flatten.headOption
