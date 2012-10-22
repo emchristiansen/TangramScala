@@ -3,13 +3,13 @@ package photostream
 import java.awt.image.BufferedImage
 import math._
 import Run.UpdateWallpaper
+import java.awt.Color
 
 ///////////////////////////////////////////////////////////
 
-case class Global(minSize: Int, maxAspectWarp: Double, borderWidth: Int) {
+case class Global(minSize: Int, maxAspectWarp: Double, border: ImageBorder) {
   require(minSize > 0)
   require(maxAspectWarp >= 1)
-  require(borderWidth >= 0)
 }
 
 ///////////////////////////////////////////////////////////
@@ -20,6 +20,11 @@ sealed trait Block {
   // The ranges are exclusive.
   val legalSizesByWidth: Map[Int, Range]
   val legalSizesByHeight: Map[Int, Range]
+
+  def splitTree(size: RectangleSize): SplitTree
+
+  // TODO: Move this crap to a pimp pattern.
+  def images: Seq[BufferedImage]
 }
 
 case class BlockLeaf(image: BufferedImage)(implicit global: Global) extends Block {
@@ -27,15 +32,15 @@ case class BlockLeaf(image: BufferedImage)(implicit global: Global) extends Bloc
 
   override val (legalSizesByWidth, legalSizesByHeight) = {
     val legalSizes = for (
-      width <- 1 to image.getWidth;
-      height <- 1 to image.getHeight;
+      width <- (image.getWidth / 2).toInt to image.getWidth;
+      height <- (image.getHeight / 2).toInt to image.getHeight;
       if max(width, height) >= global.minSize;
       originalAspect = RectangleSize(image.getWidth, image.getHeight).aspect;
       newSize = RectangleSize(width, height);
       newAspect = newSize.aspect;
       if newAspect <= global.maxAspectWarp * originalAspect;
       if newAspect >= 1 / global.maxAspectWarp * originalAspect;
-      padding = RectangleSize(2 * global.borderWidth, 2 * global.borderWidth)
+      padding = RectangleSize(2 * global.border.width, 2 * global.border.width)
     ) yield newSize + padding
 
     val legalSizesByWidth =
@@ -47,6 +52,14 @@ case class BlockLeaf(image: BufferedImage)(implicit global: Global) extends Bloc
 
     (legalSizesByWidth, legalSizesByHeight)
   }
+
+  override def splitTree(size: RectangleSize) = {
+    require(legalSizesByWidth(size.width).contains(size.height))
+
+    SplitLeaf(BorderedResizedImage.resizeToFit(global.border, size, image))
+  }
+
+  override def images = Seq(image)
 }
 
 // TODO: Bug
@@ -66,7 +79,7 @@ case class BlockNode(first: Block, second: Block, split: Split) extends Block {
       newRanges.toMap
     }
 
-    def switchDomain(sizes: Map[Int, Range]): Map[Int, Range] = 
+    def switchDomain(sizes: Map[Int, Range]): Map[Int, Range] =
       if (sizes.isEmpty) Map[Int, Range]()
       else {
         val newDomain = Range(
@@ -77,51 +90,79 @@ case class BlockNode(first: Block, second: Block, split: Split) extends Block {
           (x, Range(matches.map(_._1).min, matches.map(_._1).max + 1))
         }).toMap
       }
-    
 
     split match {
       case VerticalSplit => {
         val legalSizesByWidth = helper(first.legalSizesByWidth, second.legalSizesByWidth)
-//        println("a", legalSizesByWidth)
         (legalSizesByWidth, switchDomain(legalSizesByWidth))
       }
       case HorizontalSplit => {
         val legalSizesByHeight = helper(first.legalSizesByHeight, second.legalSizesByHeight)
-//        println("b", legalSizesByHeight)
         (switchDomain(legalSizesByHeight), legalSizesByHeight)
       }
     }
   }
 
-  //  override val legalSizes = {
-  //    def group(
-  //      matchingField: RectangleSize => Int,
-  //      otherField: RectangleSize => Int,
-  //      constructor: (Int, Int) => RectangleSize) = {
-  //      val first = leftOrTop.legalSizes.groupBy(matchingField)
-  //      val second = rightOrBottom.legalSizes.groupBy(matchingField)
-  //
-  //      val matches = first.keys.toSet.intersect(second.keys.toSet)
-  //
-  //      for (
-  //        matcher <- matches;
-  //        firstOther <- first(matcher).map(otherField);
-  //        secondOther <- second(matcher).map(otherField)
-  //      ) yield constructor(matcher, firstOther + secondOther)
-  //    }
-  //
-  //    split match {
-  //      case VerticalSplit => group(
-  //        (s: RectangleSize) => s.width,
-  //        (s: RectangleSize) => s.height,
-  //        (w: Int, h: Int) => RectangleSize(w, h))
-  //
-  //      case HorizontalSplit => group(
-  //        (s: RectangleSize) => s.height,
-  //        (s: RectangleSize) => s.width,
-  //        (h: Int, w: Int) => RectangleSize(w, h))
-  //    }
-  //  }
+  override def splitTree(size: RectangleSize) = {
+    require(legalSizesByWidth(size.width).contains(size.height))
+
+    // Select two ints so that they fall into their respective ranges and sum to |sum|.
+    // They are selected to be proportionally the same distance away from the centers
+    // of their ranges (ideally the ints come from the centers of the ranges).
+    def selectSizes(firstRange: Range, secondRange: Range, sum: Int): Tuple2[Int, Int] = {
+      val firstBottom = firstRange.start
+      val firstTop = firstRange.end - 1
+      val secondBottom = secondRange.start
+      val secondTop = secondRange.end - 1
+
+      val alpha = (sum - firstBottom - secondBottom).toDouble /
+        (firstTop + secondTop - firstBottom - secondBottom)
+
+      val (first, second) = {
+        val first = (alpha * firstTop + (1 - alpha) * firstBottom).round.toInt
+        val second = (alpha * secondTop + (1 - alpha) * secondBottom).round.toInt
+
+        // They both got rounded up.
+        if (first + second == sum + 1) (first - 1, second)
+        else (first, second)
+      }
+
+      //      assert(first + second == sum, List(firstRange, secondRange, sum, alpha, first, second).mkString(", "))
+      assert(first + second == sum)
+      assert(firstRange.contains(first))
+      assert(secondRange.contains(second))
+
+      (first, second)
+    }
+
+    split match {
+      case VerticalSplit => {
+        // The width of each tree is set, but the heights may vary.
+        val topHeights = first.legalSizesByWidth(size.width)
+        val bottomHeights = second.legalSizesByWidth(size.width)
+
+        // We select a topHeight and a bottomHeight so their sum is |size.height|.
+        val (topHeight, bottomHeight) = selectSizes(topHeights, bottomHeights, size.height)
+        SplitNode(
+          first.splitTree(RectangleSize(size.width, topHeight)),
+          second.splitTree(RectangleSize(size.width, bottomHeight)),
+          VerticalSplit)
+      }
+      case HorizontalSplit => {
+        // The height of each tree is set, but the widths may vary.  
+        val leftWidths = first.legalSizesByHeight(size.height)
+        val rightWidths = second.legalSizesByHeight(size.height)
+
+        val (leftWidth, rightWidth) = selectSizes(leftWidths, rightWidths, size.width)
+        SplitNode(
+          first.splitTree(RectangleSize(leftWidth, size.height)),
+          second.splitTree(RectangleSize(rightWidth, size.height)),
+          HorizontalSplit)
+      }
+    }
+  }
+
+  override def images = first.images ++ second.images
 }
 
 ///////////////////////////////////////////////////////////
@@ -150,7 +191,7 @@ object Block {
     val partitionSize = RectangleSize(wallpaper.width, wallpaper.height)
     //    val partitionSize = RectangleSize(1000, 500)
 
-    implicit val global = Global(300, 1.1, 1)
+    implicit val global = Global(300, 1.1, ImageBorder(1, Color.WHITE))
 
     val lookahead = 20
 
@@ -180,7 +221,6 @@ object Block {
 
           def solution(split: Split) = {
             val block = BlockNode(first, second, split)
-            //            println(block.legalSizesByHeight.keys.toList.sorted)
             if (!canFitInPartition(block)) None
             else {
               helper(Seq(block) ++ remaining) match {
@@ -212,7 +252,13 @@ object Block {
       case None => sys.error("No solution found")
       case Some((solution, remainingBlocks)) => {
         println(solution)
-        sys.error("TODO")
+        val splitTree = solution.splitTree(partitionSize)
+        val wallpaper = splitTree.wallpaper
+
+        // TODO: This loses the num misses information for the UnusedImages.
+        val unusedImages = remainingBlocks.flatMap(_.images.map(x => UnusedImage(x, 0)))
+
+        (wallpaper, unusedImages.toStream ++ images.drop(lookahead))
       }
     }
   }

@@ -30,7 +30,8 @@ object MainBuild extends Build {
       "org.scalanlp" %% "breeze-math" % "0.1",
       "org.scalanlp" %% "breeze-learn" % "0.1",
       "org.scalanlp" %% "breeze-process" % "0.1",
-      "org.scalanlp" %% "breeze-viz" % "0.1"
+      "org.scalanlp" %% "breeze-viz" % "0.1",
+      "org.jsoup" % "jsoup" % "1.7.1"
     )
   )
 

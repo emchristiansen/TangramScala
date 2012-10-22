@@ -40,7 +40,9 @@ trait RectangleLike {
   def aspect = size.width.toDouble / size.height.toDouble
 }
 
-case class ImageBorder(val borderWidth: Int, val color: Color)
+case class ImageBorder(val width: Int, val color: Color) {
+  require(width >= 0)
+}
 
 case class ResizedImage(
   originalImage: BufferedImage,
@@ -51,17 +53,52 @@ case class ResizedImage(
   require(width > 0)
   require(height > 0)
 
+  // We crop, we don't change the aspect ratio.
   def render: BufferedImage = {
-    val newImage = new BufferedImage(
-      width,
-      height,
-      BufferedImage.TYPE_INT_ARGB)
+    def scale(image: BufferedImage, scaleFactor: Double): BufferedImage = {
+      val width = (image.getWidth * scaleFactor).round.toInt
+      val height = (image.getHeight * scaleFactor).round.toInt
+      
+      val newImage = new BufferedImage(
+        width,
+        height,
+        BufferedImage.TYPE_INT_ARGB)
 
-    // TODO: I suspect this may not work.
-    val graphics = newImage.createGraphics
-    graphics.drawImage(originalImage, 0, 0, width, height, null)
-    newImage
+      val graphics = newImage.createGraphics
+      graphics.drawImage(originalImage, 0, 0, width, height, null)
+      newImage
+    }
+
+    val originalSize = RectangleSize(originalImage.getWidth, originalImage.getHeight)
+    val newSize = RectangleSize(width, height)
+
+    val scaleFactor = if (originalSize.aspect > newSize.aspect) {
+      // Make the heights match.
+      newSize.height.toDouble / originalSize.height
+    } else {
+      // Make the widths match.
+      newSize.width.toDouble / originalSize.width
+    }
+
+    val scaled = scale(originalImage, scaleFactor)
+
+    // Crop off the extra bits.
+    val extraWidth = scaled.getWidth - newSize.width
+    val extraHeight = scaled.getHeight - newSize.height
+    scaled.getSubimage(extraWidth / 2, extraHeight / 2, newSize.width, newSize.height)
   }
+
+  //  def render: BufferedImage = {
+  //    val newImage = new BufferedImage(
+  //      width,
+  //      height,
+  //      BufferedImage.TYPE_INT_ARGB)
+  //
+  //    // TODO: I suspect this may not work.
+  //    val graphics = newImage.createGraphics
+  //    graphics.drawImage(originalImage, 0, 0, width, height, null)
+  //    newImage
+  //  }
 }
 
 object ResizedImage {
@@ -72,18 +109,18 @@ object ResizedImage {
 }
 
 case class BorderedResizedImage(val border: ImageBorder, val image: ResizedImage) {
-  val width = 2 * border.borderWidth + image.width
-  val height = 2 * border.borderWidth + image.height
+  val width = 2 * border.width + image.width
+  val height = 2 * border.width + image.height
 
   def size: RectangleSize = RectangleSize(width, height)
 
   def render: BufferedImage = {
-    Preprocess.addBorder(border.borderWidth, border.color)(image.render)
+    Preprocess.addBorder(border.width, border.color)(image.render)
   }
 
   def resize(newSize: RectangleSize): BorderedResizedImage = {
-    val newWidth = newSize.width - 2 * border.borderWidth
-    val newHeight = newSize.height - 2 * border.borderWidth
+    val newWidth = newSize.width - 2 * border.width
+    val newHeight = newSize.height - 2 * border.width
     copy(image = image.copy(width = newWidth, height = newHeight))
   }
 }
@@ -96,8 +133,8 @@ object BorderedResizedImage {
     border,
     ResizedImage(
       image,
-      finalSize.width - 2 * border.borderWidth,
-      finalSize.height - 2 * border.borderWidth))
+      finalSize.width - 2 * border.width,
+      finalSize.height - 2 * border.width))
 
   implicit def implicitRectangleLike(self: BorderedResizedImage): RectangleLike = new RectangleLike {
     override def size = self.size
