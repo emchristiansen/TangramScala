@@ -8,8 +8,8 @@ import javax.imageio.ImageIO
 import java.net.URL
 
 object Main extends App {
-  //  val unusedImages = PhotoStream.getImages
-  val unusedImages = StreamBing.getImages
+    val unusedImages = PhotoStream.getImages
+//  val unusedImages = StreamBing.getImages
 
   val wallpaper = Wallpaper(Display.wallpaperWidth, Display.wallpaperHeight)
 

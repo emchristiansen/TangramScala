@@ -4,6 +4,8 @@ import java.awt.image.BufferedImage
 import math._
 import Run.UpdateWallpaper
 import java.awt.Color
+import util._
+import scala.actors.Futures._
 
 ///////////////////////////////////////////////////////////
 
@@ -15,8 +17,6 @@ case class Global(minSize: Int, maxAspectWarp: Double, border: ImageBorder) {
 ///////////////////////////////////////////////////////////
 
 sealed trait Block {
-  //  val legalSizes: Set[RectangleSize]
-
   // The ranges are exclusive.
   val legalSizesByWidth: Map[Int, Range]
   val legalSizesByHeight: Map[Int, Range]
@@ -32,8 +32,8 @@ case class BlockLeaf(image: BufferedImage)(implicit global: Global) extends Bloc
 
   override val (legalSizesByWidth, legalSizesByHeight) = {
     val legalSizes = for (
-      width <- (image.getWidth / 2).toInt to image.getWidth;
-      height <- (image.getHeight / 2).toInt to image.getHeight;
+      width <- (image.getWidth / 1.5).toInt to image.getWidth;
+      height <- (image.getHeight / 1.5).toInt to image.getHeight;
       if max(width, height) >= global.minSize;
       originalAspect = RectangleSize(image.getWidth, image.getHeight).aspect;
       newSize = RectangleSize(width, height);
@@ -62,7 +62,6 @@ case class BlockLeaf(image: BufferedImage)(implicit global: Global) extends Bloc
   override def images = Seq(image)
 }
 
-// TODO: Bug
 case class BlockNode(first: Block, second: Block, split: Split) extends Block {
   override val (legalSizesByWidth, legalSizesByHeight) = {
     def helper(firstSizes: Map[Int, Range], secondSizes: Map[Int, Range]): Map[Int, Range] = {
@@ -168,22 +167,192 @@ case class BlockNode(first: Block, second: Block, split: Split) extends Block {
 ///////////////////////////////////////////////////////////
 
 object Block {
-  def pairs[A](seq: Seq[A]): Seq[Tuple3[A, A, Seq[A]]] = {
-    val indexed = seq.toIndexedSeq
+  def extractPair[A](
+    indexed: IndexedSeq[A],
+    firstIndex: Int,
+    secondIndex: Int): Tuple3[A, A, IndexedSeq[A]] = {
+    require(firstIndex < secondIndex)
+
+    val left = indexed(firstIndex)
+    val right = indexed(secondIndex)
+
+    val remaining = indexed.slice(0, firstIndex) ++
+      indexed.slice(firstIndex + 1, secondIndex) ++
+      indexed.slice(secondIndex + 1, indexed.size)
+
+    assert(remaining.size + 2 == indexed.size)
+
+    (left, right, remaining)
+  }
+
+  def pairs[A](indexed: IndexedSeq[A]): IndexedSeq[Tuple3[A, A, IndexedSeq[A]]] = {
     for (
       i <- 0 until indexed.size;
       j <- i + 1 until indexed.size
     ) yield {
-      val left = indexed(i)
-      val right = indexed(j)
+      extractPair(indexed, i, j)
+    }
+  }
 
-      val remaining = indexed.slice(0, i) ++
-        indexed.slice(i + 1, j) ++
-        indexed.slice(j + 1, indexed.size)
+  def randomPair[A](indexed: IndexedSeq[A]): Tuple3[A, A, IndexedSeq[A]] = {
+    require(indexed.size >= 2)
 
-      assert(remaining.size + 2 == seq.size)
+    val IndexedSeq(firstIndex, secondIndex) =
+      (new Random).shuffle(0 until indexed.size).take(2).sorted
+    extractPair(indexed, firstIndex, secondIndex)
+  }
 
-      (left, right, remaining)
+  def dfsStrategy(blocks: IndexedSeq[Block], partitionSize: RectangleSize): Option[Tuple2[Block, IndexedSeq[Block]]] = {
+    println(blocks.size)
+
+    def isSolution(block: Block) =
+      block.legalSizesByWidth.contains(partitionSize.width) &&
+        block.legalSizesByWidth(partitionSize.width).contains(partitionSize.height)
+
+    val (init, tail) = blocks.span(block => !isSolution(block))
+
+    if (!tail.isEmpty) Some((tail.head, init ++ tail.tail))
+    else if (blocks.size < 2) None
+    else {
+      val candidates = (new Random).shuffle(pairs(blocks))
+
+      val solutions = for ((first, second, remaining) <- candidates.toStream) yield {
+        def canFitInPartition(block: Block) = {
+          val canFitForWidth = for (
+            (width, heights) <- block.legalSizesByWidth;
+            if width <= partitionSize.width
+          ) yield heights.start <= partitionSize.height
+
+          canFitForWidth.find(_ == true).isDefined
+        }
+
+        def solution(split: Split) = {
+          val block = BlockNode(first, second, split)
+          if (!canFitInPartition(block)) None
+          else {
+            dfsStrategy(IndexedSeq(block) ++ remaining, partitionSize) match {
+              case solution @ Some(_) => solution
+              case None => None
+            }
+          }
+        }
+
+        lazy val verticalSolution = solution(VerticalSplit)
+        lazy val horizontalSolution = solution(HorizontalSplit)
+
+        val favorVertical = (new util.Random).nextBoolean
+        if (favorVertical && verticalSolution.isDefined) verticalSolution
+        else if ((!favorVertical) && horizontalSolution.isDefined) horizontalSolution
+        else if (verticalSolution.isDefined) verticalSolution
+        else if (horizontalSolution.isDefined) horizontalSolution
+        else None
+      }
+
+      solutions.dropWhile(!_.isDefined).headOption match {
+        case Some(solution) => solution
+        case None => None
+      }
+    }
+  }
+
+  def dfsWrapper(blocks: IndexedSeq[Block], partitionSize: RectangleSize): Option[Tuple2[Block, IndexedSeq[Block]]] = {
+    def runWithTimeout[T](timeoutMs: Long)(f: => T): Option[T] = {
+      awaitAll(timeoutMs, future(f)).head.asInstanceOf[Option[T]]
+    }
+
+    val timeoutMS = 5 * 1000
+    val maxAttempts = 8
+
+    // TODO: Specifying parallelism manually is stupid.
+    val parallelism = 2    
+    
+    val attempts = for (_ <- (0 until maxAttempts).toStream) yield {
+      // This |flatten| removes the attempts that timed out.
+      val possibleSolutions = (0 until parallelism).par.map(_ => runWithTimeout(timeoutMS)(
+        dfsStrategy(blocks, partitionSize))).flatten.toIndexedSeq
+      // This |flatten| removes the attempts that finished in time but failed.
+      // We take the first solution if it exists.
+      possibleSolutions.flatten.headOption      
+    }
+
+    (attempts.zipWithIndex.dropWhile(_._1 == None).headOption: @unchecked) match {
+      case Some((solution @ Some(_), index)) => {
+        println("Found a solution on attempt %d".format(index))
+        solution
+      }
+      case None => {
+        println("No solution found after %d attempts".format(maxAttempts))
+        None
+      }
+    }
+  }
+
+  // Build a Block by making random legal decisions. If we find a solution, 
+  // return it. Otherwise try again.
+  def rolloutStrategy(
+    blocks: IndexedSeq[Block],
+    partitionSize: RectangleSize): Option[Tuple2[Block, IndexedSeq[Block]]] = {
+    println(blocks.size)
+
+    def isSolution(block: Block) =
+      block.legalSizesByWidth.contains(partitionSize.width) &&
+        block.legalSizesByWidth(partitionSize.width).contains(partitionSize.height)
+
+    val (init, tail) = blocks.span(block => !isSolution(block))
+
+    if (!tail.isEmpty) Some((tail.head, init ++ tail.tail))
+    else if (blocks.size < 2) None
+    else {
+      val (first, second, remaining) = randomPair(blocks)
+
+      def canFitInPartition(block: Block) = {
+        val canFitForWidth = for (
+          (width, heights) <- block.legalSizesByWidth;
+          if width <= partitionSize.width
+        ) yield heights.start <= partitionSize.height
+
+        canFitForWidth.find(_ == true).isDefined
+      }
+
+      def solution(split: Split) = {
+        val block = BlockNode(first, second, split)
+        if (!canFitInPartition(block)) None
+        else {
+          rolloutStrategy(IndexedSeq(block) ++ remaining, partitionSize) match {
+            case solution @ Some(_) => solution
+            case None => None
+          }
+        }
+      }
+
+      if ((new Random).nextBoolean) solution(VerticalSplit)
+      else solution(HorizontalSplit)
+    }
+  }
+
+  def rolloutHelper(
+    blocks: IndexedSeq[Block],
+    partitionSize: RectangleSize): Option[Tuple2[Block, IndexedSeq[Block]]] = {
+    val maxAttempts = 512
+    // TODO: Specifying parallelism manually is stupid.
+    val parallelism = 8
+
+    // Note this is evaluated lazily.
+    val attempts = for (_ <- (0 until maxAttempts).toStream) yield {
+      val possibleSolutions = (0 until parallelism).par.map(_ => rolloutStrategy(blocks, partitionSize))
+      // Drop the failed attempts and take the first solution if it exists.
+      possibleSolutions.toIndexedSeq.flatten.headOption
+    }
+
+    (attempts.zipWithIndex.dropWhile(_._1 == None).headOption: @unchecked) match {
+      case Some((solution @ Some(_), index)) => {
+        println("Found a solution on attempt %d".format(index))
+        solution
+      }
+      case None => {
+        println("No solution found after %d attempts".format(maxAttempts))
+        None
+      }
     }
   }
 
@@ -195,60 +364,7 @@ object Block {
 
     val lookahead = 20
 
-    def helper(blocks: Seq[Block]): Option[Tuple2[Block, Seq[Block]]] = {
-      println(blocks.size)
-
-      def isSolution(block: Block) =
-        block.legalSizesByWidth.contains(partitionSize.width) &&
-          block.legalSizesByWidth(partitionSize.width).contains(partitionSize.height)
-
-      val (init, tail) = blocks.span(block => !isSolution(block))
-
-      if (!tail.isEmpty) Some((tail.head, init ++ tail.tail))
-      else if (blocks.size < 2) None
-      else {
-        val candidates = pairs(blocks)
-
-        val solutions = for ((first, second, remaining) <- candidates.toStream) yield {
-          def canFitInPartition(block: Block) = {
-            val canFitForWidth = for (
-              (width, heights) <- block.legalSizesByWidth;
-              if width <= partitionSize.width
-            ) yield heights.start <= partitionSize.height
-
-            canFitForWidth.find(_ == true).isDefined
-          }
-
-          def solution(split: Split) = {
-            val block = BlockNode(first, second, split)
-            if (!canFitInPartition(block)) None
-            else {
-              helper(Seq(block) ++ remaining) match {
-                case solution @ Some(_) => solution
-                case None => None
-              }
-            }
-          }
-
-          lazy val verticalSolution = solution(VerticalSplit)
-          lazy val horizontalSolution = solution(HorizontalSplit)
-
-          val favorVertical = (new util.Random).nextBoolean
-          if (favorVertical && verticalSolution.isDefined) verticalSolution
-          else if ((!favorVertical) && horizontalSolution.isDefined) horizontalSolution
-          else if (verticalSolution.isDefined) verticalSolution
-          else if (horizontalSolution.isDefined) horizontalSolution
-          else None
-        }
-
-        solutions.dropWhile(!_.isDefined).headOption match {
-          case Some(solution) => solution
-          case None => None
-        }
-      }
-    }
-
-    helper(images.take(lookahead).toList.map(i => BlockLeaf(i.image))) match {
+    dfsWrapper(images.take(lookahead).map(i => BlockLeaf(i.image)).toIndexedSeq, partitionSize) match {
       case None => sys.error("No solution found")
       case Some((solution, remainingBlocks)) => {
         println(solution)
