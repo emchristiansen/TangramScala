@@ -9,13 +9,6 @@ import scala.actors.Futures._
 
 ///////////////////////////////////////////////////////////
 
-case class Global(minSize: Int, maxAspectWarp: Double, border: ImageBorder) {
-  require(minSize > 0)
-  require(maxAspectWarp >= 1)
-}
-
-///////////////////////////////////////////////////////////
-
 sealed trait Block {
   // The ranges are exclusive.
   val legalSizesByWidth: Map[Int, Range]
@@ -27,20 +20,20 @@ sealed trait Block {
   def images: Seq[BufferedImage]
 }
 
-case class BlockLeaf(image: BufferedImage)(implicit global: Global) extends Block {
+case class BlockLeaf(image: BufferedImage)(implicit constraints: Constraints) extends Block {
   import RectangleSize._
 
   override val (legalSizesByWidth, legalSizesByHeight) = {
     val legalSizes = for (
-      width <- (image.getWidth / 1.5).toInt to image.getWidth;
-      height <- (image.getHeight / 1.5).toInt to image.getHeight;
-      if max(width, height) >= global.minSize;
+      width <- (image.getWidth * constraints.minRelativeSize).round.toInt to image.getWidth;
+      height <- (image.getHeight * constraints.minRelativeSize).round.toInt to image.getHeight;
+      if max(width, height) >= constraints.minAbsoluteSize;
       originalAspect = RectangleSize(image.getWidth, image.getHeight).aspect;
       newSize = RectangleSize(width, height);
       newAspect = newSize.aspect;
-      if newAspect <= global.maxAspectWarp * originalAspect;
-      if newAspect >= 1 / global.maxAspectWarp * originalAspect;
-      padding = RectangleSize(2 * global.border.width, 2 * global.border.width)
+      if newAspect <= constraints.maxAspectWarp * originalAspect;
+      if newAspect >= 1 / constraints.maxAspectWarp * originalAspect;
+      padding = RectangleSize(2 * constraints.border.width, 2 * constraints.border.width)
     ) yield newSize + padding
 
     val legalSizesByWidth =
@@ -56,7 +49,7 @@ case class BlockLeaf(image: BufferedImage)(implicit global: Global) extends Bloc
   override def splitTree(size: RectangleSize) = {
     require(legalSizesByWidth(size.width).contains(size.height))
 
-    SplitLeaf(BorderedResizedImage.resizeToFit(global.border, size, image))
+    SplitLeaf(BorderedResizedImage.resizeToFit(constraints.border, size, image))
   }
 
   override def images = Seq(image)
@@ -360,7 +353,7 @@ object Block {
     val partitionSize = RectangleSize(wallpaper.width, wallpaper.height)
     //    val partitionSize = RectangleSize(1000, 500)
 
-    implicit val global = Global(300, 1.1, ImageBorder(1, Color.WHITE))
+    implicit val global = Constraints(300, 0.5, 1.1, ImageBorder(1, Color.WHITE))
 
     val lookahead = 20
 
