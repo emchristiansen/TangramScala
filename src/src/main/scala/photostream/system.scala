@@ -62,6 +62,7 @@ object Run {
       assert(newWallpaper != wallpaper)
       assert(newImages != images)
       Display.setWallpaper(newWallpaper.render)
+      println("sleeping for %dms".format(minDelayInMilliseconds))
       Thread.sleep(minDelayInMilliseconds)
       refresh(newWallpaper, newImages)
     }

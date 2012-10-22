@@ -18,6 +18,8 @@ case class Constraints(
   // We don't want to severely crop images, so we require:
   // 1 / maxAspectWarp * finalAspect <= originalAspect <= maxAspectWarp * finalAspect
   maxAspectWarp: Double,
+  // The final size of the wallpaper.
+  wallpaperSize: RectangleSize,
   border: ImageBorder) {
   require(minAbsoluteSize > 0)
   require(maxAspectWarp >= 1)
@@ -34,6 +36,7 @@ object Constraints {
         (constraint.minAbsoluteSize * .95).round.toInt,
         constraint.minRelativeSize * .95,
         constraint.maxAspectWarp * 1.05,
+        constraint.wallpaperSize,
         constraint.border)
 
       Stream.iterate(self)(relax)

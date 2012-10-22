@@ -195,12 +195,10 @@ object Block {
     extractPair(indexed, firstIndex, secondIndex)
   }
 
-  def dfsStrategy(blocks: IndexedSeq[Block], partitionSize: RectangleSize): Option[Tuple2[Block, IndexedSeq[Block]]] = {
-    println(blocks.size)
-
+  def dfsStrategy(blocks: IndexedSeq[Block])(implicit constraints: Constraints): Option[Tuple2[Block, IndexedSeq[Block]]] = {
     def isSolution(block: Block) =
-      block.legalSizesByWidth.contains(partitionSize.width) &&
-        block.legalSizesByWidth(partitionSize.width).contains(partitionSize.height)
+      block.legalSizesByWidth.contains(constraints.wallpaperSize.width) &&
+        block.legalSizesByWidth(constraints.wallpaperSize.width).contains(constraints.wallpaperSize.height)
 
     val (init, tail) = blocks.span(block => !isSolution(block))
 
@@ -213,8 +211,8 @@ object Block {
         def canFitInPartition(block: Block) = {
           val canFitForWidth = for (
             (width, heights) <- block.legalSizesByWidth;
-            if width <= partitionSize.width
-          ) yield heights.start <= partitionSize.height
+            if width <= constraints.wallpaperSize.width
+          ) yield heights.start <= constraints.wallpaperSize.height
 
           canFitForWidth.find(_ == true).isDefined
         }
@@ -223,7 +221,7 @@ object Block {
           val block = BlockNode(first, second, split)
           if (!canFitInPartition(block)) None
           else {
-            dfsStrategy(IndexedSeq(block) ++ remaining, partitionSize) match {
+            dfsStrategy(IndexedSeq(block) ++ remaining) match {
               case solution @ Some(_) => solution
               case None => None
             }
@@ -248,24 +246,29 @@ object Block {
     }
   }
 
-  def dfsWrapper(blocks: IndexedSeq[Block], partitionSize: RectangleSize): Option[Tuple2[Block, IndexedSeq[Block]]] = {
+  def dfsWrapper(
+    images: IndexedSeq[BufferedImage])(
+      implicit constraintsStream: Stream[Constraints]): Option[Tuple2[Block, IndexedSeq[Block]]] = {
     def runWithTimeout[T](timeoutMs: Long)(f: => T): Option[T] = {
       awaitAll(timeoutMs, future(f)).head.asInstanceOf[Option[T]]
     }
 
     val timeoutMS = 5 * 1000
     val maxAttempts = 8
-
     // TODO: Specifying parallelism manually is stupid.
-    val parallelism = 2    
-    
-    val attempts = for (_ <- (0 until maxAttempts).toStream) yield {
+    // TODO: There's a bug where setting higher parallelism creates threads
+    // that possibly run forever. My guess: if you never demand the result
+    // of |runWithTimeout|, the thread may never be killed.
+    val parallelism = 1
+
+    val attempts = for (constraints <- constraintsStream.take(maxAttempts)) yield {
+      val blocks = images.map(image => BlockLeaf(image)(constraints))
       // This |flatten| removes the attempts that timed out.
       val possibleSolutions = (0 until parallelism).par.map(_ => runWithTimeout(timeoutMS)(
-        dfsStrategy(blocks, partitionSize))).flatten.toIndexedSeq
+        dfsStrategy(blocks)(constraints))).toIndexedSeq.flatten
       // This |flatten| removes the attempts that finished in time but failed.
       // We take the first solution if it exists.
-      possibleSolutions.flatten.headOption      
+      possibleSolutions.flatten.headOption
     }
 
     (attempts.zipWithIndex.dropWhile(_._1 == None).headOption: @unchecked) match {
@@ -353,14 +356,19 @@ object Block {
     val partitionSize = RectangleSize(wallpaper.width, wallpaper.height)
     //    val partitionSize = RectangleSize(1000, 500)
 
-    implicit val global = Constraints(300, 0.5, 1.1, ImageBorder(1, Color.WHITE))
+    implicit val constraintsStream = Constraints(
+        300, 
+        0.75, 
+        1.05, 
+        partitionSize, 
+        ImageBorder(1, Color.WHITE)).relaxations
 
     val lookahead = 20
 
-    dfsWrapper(images.take(lookahead).map(i => BlockLeaf(i.image)).toIndexedSeq, partitionSize) match {
+    //    dfsWrapper(images.take(lookahead).map(i => Blockeaf(i.image)).toIndexedSeq, partitionSize) match {
+    dfsWrapper(images.take(lookahead).map(i => i.image).toIndexedSeq) match {
       case None => sys.error("No solution found")
       case Some((solution, remainingBlocks)) => {
-        println(solution)
         val splitTree = solution.splitTree(partitionSize)
         val wallpaper = splitTree.wallpaper
 

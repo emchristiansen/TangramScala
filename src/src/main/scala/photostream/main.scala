@@ -15,7 +15,7 @@ object Main extends App {
 
   //  Run.updateRunner(4000, RandomStrategy.single, wallpaper, unusedImages)
 
-  Run.updateRunner(4000, Block.full, wallpaper, unusedImages)
+  Run.updateRunner(160000, Block.full, wallpaper, unusedImages)
 
 }
 
