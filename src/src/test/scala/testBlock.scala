@@ -3,7 +3,7 @@ import java.net.URL
 import org.scalatest.FunSuite
 import com.sun.syndication.io.{ SyndFeedInput, XmlReader }
 import photostream.{ Run, Wallpaper }
-import photostream.styles.Block
+import photostream.styles.BlockStyle
 import com.googlecode.flickrjandroid.Flickr
 import com.googlecode.flickrjandroid.REST
 

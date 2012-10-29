@@ -10,7 +10,7 @@ import com.frugalmechanic.optparse.StrOpt
 import com.frugalmechanic.optparse.IntOpt
 import java.io.File
 import photostream.streams.StreamBing
-import photostream.styles.Block
+import photostream.styles.BlockStyle
 import photostream.streams.StreamFlickr
 import com.twitter.util.Eval
 
@@ -21,7 +21,7 @@ object Main extends OptParse {
   val imageStreamOption = StrOpt(
     default = Some("StreamFlickr.vibrant"))
   val styleOption = StrOpt(
-    default = Some("Block"))
+    default = Some("BlockStyle"))
   val refreshDelayOption = IntOpt()
 
   def main(args: Array[String]) {
@@ -44,7 +44,7 @@ object Main extends OptParse {
           for (archiveDirectory <- archiveDirectoryOption) {
             val directory = new File(archiveDirectory)
             require(directory.isDirectory)
-            val path = new File(directory, "image_%.6d.png".format(index))
+            val path = new File(directory, "image_%06d.png".format(index))
             ImageIO.write(image, "png", path)
           }
 

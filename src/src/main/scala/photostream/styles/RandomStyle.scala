@@ -1,17 +1,18 @@
 package photostream.styles
 
 import photostream._
-import Run.UpdateWallpaper
 import java.awt.Color
 import scala.util.Random
 import photostream.UnusedImage
 
-object RandomStrategy {
-  val border = ImageBorder(2, Color.black)
+///////////////////////////////////////////////////////////
+
+object RandomStyle extends DisplayStyle {
+  val border = ImageBorder(1, Color.white)
 
   val random = new Random(0)
 
-  def single: UpdateWallpaper = (wallpaper, images) => {
+  def updateWallpaper = (wallpaper, images) => {
     val UnusedImage(headImage, _) #:: tailImages = images
     
     val (x, y) = (

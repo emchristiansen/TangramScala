@@ -18,7 +18,7 @@ import scala.Option.option2Iterable
 
 ///////////////////////////////////////////////////////////
 
-sealed trait Block {
+sealed trait BlockStyle {
   // The ranges are exclusive.
   val legalSizesByWidth: Map[Int, Range]
   val legalSizesByHeight: Map[Int, Range]
@@ -29,7 +29,7 @@ sealed trait Block {
   def images: Seq[BufferedImage]
 }
 
-case class BlockLeaf(image: BufferedImage)(implicit constraints: Constraints) extends Block {
+case class BlockLeaf(image: BufferedImage)(implicit constraints: Constraints) extends BlockStyle {
   import RectangleSize._
 
   override val (legalSizesByWidth, legalSizesByHeight) = {
@@ -64,7 +64,7 @@ case class BlockLeaf(image: BufferedImage)(implicit constraints: Constraints) ex
   override def images = Seq(image)
 }
 
-case class BlockNode(first: Block, second: Block, split: Split) extends Block {
+case class BlockNode(first: BlockStyle, second: BlockStyle, split: Split) extends BlockStyle {
   override val (legalSizesByWidth, legalSizesByHeight) = {
     def helper(firstSizes: Map[Int, Range], secondSizes: Map[Int, Range]): Map[Int, Range] = {
       val matches =
@@ -168,7 +168,7 @@ case class BlockNode(first: Block, second: Block, split: Split) extends Block {
 
 ///////////////////////////////////////////////////////////
 
-object Block extends DisplayStyle {
+object BlockStyle extends DisplayStyle {
   def extractPair[A](
     indexed: IndexedSeq[A],
     firstIndex: Int,
@@ -204,8 +204,9 @@ object Block extends DisplayStyle {
     extractPair(indexed, firstIndex, secondIndex)
   }
 
-  def dfsStrategy(blocks: IndexedSeq[Block])(implicit constraints: Constraints): Option[Tuple2[Block, IndexedSeq[Block]]] = {
-    def isSolution(block: Block) =
+  def dfsStrategy(blocks: IndexedSeq[BlockStyle])(
+      implicit constraints: Constraints): Option[Tuple2[BlockStyle, IndexedSeq[BlockStyle]]] = {
+    def isSolution(block: BlockStyle) =
       block.legalSizesByWidth.contains(constraints.wallpaperSize.width) &&
         block.legalSizesByWidth(constraints.wallpaperSize.width).contains(constraints.wallpaperSize.height)
 
@@ -217,7 +218,7 @@ object Block extends DisplayStyle {
       val candidates = (new Random).shuffle(pairs(blocks))
 
       val solutions = for ((first, second, remaining) <- candidates.toStream) yield {
-        def canFitInPartition(block: Block) = {
+        def canFitInPartition(block: BlockStyle) = {
           val canFitForWidth = for (
             (width, heights) <- block.legalSizesByWidth;
             if width <= constraints.wallpaperSize.width
@@ -257,7 +258,7 @@ object Block extends DisplayStyle {
 
   def dfsWrapper(
     images: IndexedSeq[BufferedImage])(
-      implicit constraintsStream: Stream[Constraints]): Option[Tuple2[Block, IndexedSeq[Block]]] = {
+      implicit constraintsStream: Stream[Constraints]): Option[Tuple2[BlockStyle, IndexedSeq[BlockStyle]]] = {
 //    def runWithTimeout[T](timeoutMs: Long)(f: => T): Option[T] = {
 //      awaitAll(timeoutMs, future(f)).head.asInstanceOf[Option[T]]
 //    }
@@ -276,7 +277,7 @@ object Block extends DisplayStyle {
       val futures = (0 until parallelism).map(_ => future(dfsStrategy(blocks)(constraints)))
       // This |flatten| removes the attempts that timed out.
       val possibleSolutions = 
-        awaitAll(timeoutMS, futures: _*).flatten.map(_.asInstanceOf[Option[Tuple2[Block, IndexedSeq[Block]]]])
+        awaitAll(timeoutMS, futures: _*).flatten.map(_.asInstanceOf[Option[Tuple2[BlockStyle, IndexedSeq[BlockStyle]]]])
 //      val possibleSolutions = (0 until parallelism).par.map(_ => runWithTimeout(timeoutMS)(
 //        dfsStrategy(blocks)(constraints))).toIndexedSeq.flatten
       // This |flatten| removes the attempts that finished in time but failed.
@@ -299,11 +300,11 @@ object Block extends DisplayStyle {
   // Build a Block by making random legal decisions. If we find a solution, 
   // return it. Otherwise try again.
   def rolloutStrategy(
-    blocks: IndexedSeq[Block],
-    partitionSize: RectangleSize): Option[Tuple2[Block, IndexedSeq[Block]]] = {
+    blocks: IndexedSeq[BlockStyle], 
+    partitionSize: RectangleSize): Option[Tuple2[BlockStyle, IndexedSeq[BlockStyle]]] = {
     println(blocks.size)
 
-    def isSolution(block: Block) =
+    def isSolution(block: BlockStyle) =
       block.legalSizesByWidth.contains(partitionSize.width) &&
         block.legalSizesByWidth(partitionSize.width).contains(partitionSize.height)
 
@@ -314,7 +315,7 @@ object Block extends DisplayStyle {
     else {
       val (first, second, remaining) = randomPair(blocks)
 
-      def canFitInPartition(block: Block) = {
+      def canFitInPartition(block: BlockStyle) = {
         val canFitForWidth = for (
           (width, heights) <- block.legalSizesByWidth;
           if width <= partitionSize.width
@@ -340,8 +341,8 @@ object Block extends DisplayStyle {
   }
 
   def rolloutHelper(
-    blocks: IndexedSeq[Block],
-    partitionSize: RectangleSize): Option[Tuple2[Block, IndexedSeq[Block]]] = {
+    blocks: IndexedSeq[BlockStyle], 
+    partitionSize: RectangleSize): Option[Tuple2[BlockStyle, IndexedSeq[BlockStyle]]] = {
     val maxAttempts = 512
     // TODO: Specifying parallelism manually is stupid.
     val parallelism = 8
@@ -367,7 +368,6 @@ object Block extends DisplayStyle {
 
   def updateWallpaper = (wallpaper, images) => {
     val partitionSize = RectangleSize(wallpaper.width, wallpaper.height)
-    //    val partitionSize = RectangleSize(1000, 500)
 
     implicit val constraintsStream = Constraints(
         300, 
