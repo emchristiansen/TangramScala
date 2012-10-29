@@ -27,8 +27,9 @@ object Main extends OptParse {
   def main(args: Array[String]) {
     parse(args)
 
-    def interpretString[A](expression: String): A = {
-      val source = "import photostream.streams._; import photostream.styles._; %s".format(
+    def interpretString[A : Manifest](expression: String): A = {
+      val source = "import photostream.streams._; import photostream.styles._; val value: %s = %s; value".format(
+        implicitly[Manifest[A]],
         expression)
       (new Eval).apply[A](source)
     }

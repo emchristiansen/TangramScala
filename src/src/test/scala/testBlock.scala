@@ -6,6 +6,7 @@ import photostream.{ Run, Wallpaper }
 import photostream.styles.BlockStyle
 import com.googlecode.flickrjandroid.Flickr
 import com.googlecode.flickrjandroid.REST
+import scala.runtime.RichInt
 
 ///////////////////////////////////////////////////////////
 
@@ -30,7 +31,7 @@ class TestBlock extends FunSuite {
     println(feed.getEntries.size)
   }
 
-  ignore("flickr api") {
+  ignore("flickr api") {  
     val apiKey = "3866899f6a37765e54a51430ac201867"
     val apiSecret = "534e73ed854fc635"
     val f = new Flickr(apiKey, apiSecret, new REST)

@@ -16,6 +16,7 @@ import photostream.{ DocumentCacher, RetryingImageStream }
 case class StreamFlickr(urls: Seq[URL]) extends RetryingImageStream {
   def waitBetweenAttemptsInMs = 5 * 60 * 1000
 
+  // TODO: Can I avoid state entirely?
   private val oldEntries = collection.mutable.Set[SyndEntry]()
 
   def nextImage: Option[BufferedImage] = {
