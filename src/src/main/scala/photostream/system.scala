@@ -6,6 +6,10 @@ import java.io.File
 import java.awt.Toolkit
 import scala.annotation.tailrec
 
+import styles._
+
+///////////////////////////////////////////////////////////
+
 object Display {
   // TODO: Make this reflect the size of the desktop, which is actually smaller
   // than the screen resolution, owing to possible bars at the top or bottom.
@@ -47,17 +51,15 @@ object Runtime {
 
 // TODO: Rename
 object Run {
-  type UpdateWallpaper = (Wallpaper, Stream[UnusedImage]) => Tuple2[Wallpaper, Stream[UnusedImage]]
-
   def updateRunner(
     minDelayInMilliseconds: Int,
-    updater: UpdateWallpaper,
+    updateWallpaper: DisplayStyle.UpdateWallpaper,
     wallpaper: Wallpaper,
-    images: Stream[UnusedImage]) {
-
+    imageStream: Stream[BufferedImage]) {
+    
     @tailrec
     def refresh(wallpaper: Wallpaper, images: Stream[UnusedImage]) {
-      val (newWallpaper, newImages) = updater(wallpaper, images)
+      val (newWallpaper, newImages) = updateWallpaper(wallpaper, images)
       // The updater must do something.
       assert(newWallpaper != wallpaper)
       assert(newImages != images)
@@ -67,6 +69,6 @@ object Run {
       refresh(newWallpaper, newImages)
     }
 
-    refresh(wallpaper, images)
+    refresh(wallpaper, imageStream.map(UnusedImage.apply))
   }
 }

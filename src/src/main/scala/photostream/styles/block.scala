@@ -169,7 +169,7 @@ case class BlockNode(first: Block, second: Block, split: Split) extends Block {
 
 ///////////////////////////////////////////////////////////
 
-object Block {
+object Block extends DisplayStyle {
   def extractPair[A](
     indexed: IndexedSeq[A],
     firstIndex: Int,
@@ -366,7 +366,7 @@ object Block {
     }
   }
 
-  def full: UpdateWallpaper = (wallpaper, images) => {
+  def updateWallpaper = (wallpaper, images) => {
     val partitionSize = RectangleSize(wallpaper.width, wallpaper.height)
     //    val partitionSize = RectangleSize(1000, 500)
 

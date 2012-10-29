@@ -11,59 +11,69 @@ import com.frugalmechanic.optparse.IntOpt
 import java.io.File
 import photostream.streams.StreamBing
 import photostream.styles.Block
-import photostream.streams.StreamNYTimesFlickr
 import photostream.streams.StreamFlickr
+import com.twitter.util.Eval
 
 ///////////////////////////////////////////////////////////
 
+//  // Example with all available options instead of relying on the defaults
+//  val message = BoolOpt(
+//     long="message",          // Long name to use (--message)
+//     short="m",               // Short name to use (-m)
+//     default="Hello",         // Default value
+//     desc="Message to print", // Help message description
+//     enables=Nil,             // Other flags to enable if this one is enabled (single option or a Seq of options)
+//     disables=Nil,            // Other flags to disable if this one is enabled (single option or a Seq of options)
+//     invalidWith=Nil,         // Other options this flag is invalid with (they cannot be set)
+//     validWith=Nil,           // Other options that are required with this flag
+//     exclusive=false,         // Other options can be set when this option is set
+//     validate="^[a-zA-Z ,]+$" // Use a regex for validation via an implicit that converts it to: (String) => Boolean
+//  )
+
 object Main extends OptParse {
-  val imageSaveDirectoryOption = StrOpt()
-  val photoStreamOption = StrOpt()
-  val styleOption = StrOpt()
+  val archiveDirectoryOption = StrOpt()
+  val imageStreamOption = StrOpt(
+    default = Some("StreamFlickr.vibrant"))
+  val styleOption = StrOpt(
+    default = Some("Block"))
   val refreshDelayOption = IntOpt()
 
   def main(args: Array[String]) {
     parse(args)
 
-    val flickrURLs = Seq(
-      "http://api.flickr.com/services/feeds/photos_public.gne?id=15171232@N02&lang=en-us&format=rss_200",
-      "http://api.flickr.com/services/feeds/photos_public.gne?id=49598046@N00&lang=en-us&format=rss_200",
-      "http://api.flickr.com/services/feeds/photos_public.gne?id=14686714@N00&lang=en-us&format=rss_200")
+    def interpretString[A](expression: String): A = {
+      val source = "import photostream.streams._; import photostream.styles._; %s".format(
+        expression)
+      (new Eval).apply[A](source)
+    }
 
-    val photoStream = {
-      val unwrapped = photoStreamOption.getOrElse("bing") match {
-        case "bing" => StreamBing.getImages
-        case "nytimes" => StreamNYTimesFlickr.getImages
-        case "flickr" => StreamFlickr.getImages(flickrURLs.map(url => new URL(url)))
-        case _ => sys.error("photo stream not recognized")
-      }
+    val imageStream = {
+      // The image stream is JIT compiled based on the command-line argument.
+      val unwrapped = interpretString[ImageStream](imageStreamOption.get)
 
       // This wraps the stream in such a way that getting the next
       // image also writes it to disk.
-      unwrapped.zipWithIndex.map({
+      unwrapped.imageStream.zipWithIndex.map({
         case (image, index) =>
-          for (imageSaveDirectory <- imageSaveDirectoryOption) {
-            val directory = new File(imageSaveDirectory)
+          for (archiveDirectory <- archiveDirectoryOption) {
+            val directory = new File(archiveDirectory)
             require(directory.isDirectory)
             val path = new File(directory, "image_%.6d.png".format(index))
-            ImageIO.write(image.image, "png", path)
+            ImageIO.write(image, "png", path)
           }
 
           image
       })
     }
 
-    val style = styleOption.getOrElse("block") match {
-      case "block" => Block.full
-      case _ => sys.error("layout not recognized")
-    }
+    val style = interpretString[DisplayStyle](styleOption.get)
 
     val refreshDelay = refreshDelayOption.getOrElse(60)
     require(refreshDelay >= 0)
 
     val wallpaper = Wallpaper(Display.wallpaperWidth, Display.wallpaperHeight)
 
-    Run.updateRunner(refreshDelay * 1000, Block.full, wallpaper, photoStream)
+    Run.updateRunner(refreshDelay * 1000, style.updateWallpaper, wallpaper, imageStream)
   }
 }
 

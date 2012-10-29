@@ -32,7 +32,10 @@ object MainBuild extends Build {
       "org.scalanlp" %% "breeze-process" % "0.1",
       "org.scalanlp" %% "breeze-viz" % "0.1",
       "org.jsoup" % "jsoup" % "1.7.1",
-      "rome" % "rome" % "1.0"
+      "rome" % "rome" % "1.0",
+      "com.googlecode.flickrj-android" % "flickrj-android" % "2.0.0",
+      "org.json" % "json" % "20090211",
+      "org.slf4j" % "slf4j-api" % "1.6.6"
     )
   )
 

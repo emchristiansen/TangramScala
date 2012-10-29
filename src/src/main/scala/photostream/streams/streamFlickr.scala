@@ -1,55 +1,84 @@
 package photostream.streams
 
+import java.awt.image.BufferedImage
 import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Date
-import scala.collection.immutable.Stream.consWrapper
+
 import org.jsoup.nodes.Element
-import photostream.{ DocumentCacher, UnusedImage }
-import com.sun.syndication.io.SyndFeedInput
-import org.xml.sax.XMLReader
-import com.sun.syndication.io.XmlReader
+
 import com.sun.syndication.feed.synd.SyndEntry
+import com.sun.syndication.io.{ SyndFeedInput, XmlReader }
+
+import photostream.{ DocumentCacher, RetryingImageStream }
 
 ///////////////////////////////////////////////////////////
 
 // TODO: This shares a lot of structure with StreamBing.
-object StreamFlickr {
+// TODO: This sometimes grabs "Image doesn't exist" images.
+case class StreamFlickr(urls: Seq[URL]) extends RetryingImageStream {
+  def waitBetweenAttemptsInMs = 5 * 60 * 1000
+
   private val oldEntries = collection.mutable.Set[SyndEntry]()
 
-  def getImages(urls: Seq[URL]): Stream[UnusedImage] = {
+  def nextImage: Option[BufferedImage] = {
+    // Whenever we need a new image, we get the up-to-date list of images, and
+    // return the newest one that we haven't already used.    
+
     val allFeedEntries = (for (url <- urls) yield {
+      println("Getting %s".format(url))
       val syndFeedInput = new SyndFeedInput
       val feed = syndFeedInput.build(new XmlReader(url))
       feed.getEntries.toArray.toList.asInstanceOf[List[SyndEntry]]
     }).flatten
 
     val newEntries = allFeedEntries.filterNot(oldEntries)
-    
-    if (newEntries.isEmpty) 
-      sys.error("It appears we already used all %d images".format(allFeedEntries.size))
+
+    if (newEntries.isEmpty) return None
 
     // We take the newest entry.
     val entry = newEntries.maxBy(_.getPublishedDate)
     oldEntries += entry
 
-    // We need to visit the main page to get the full sized image.
-    val link = new URL(entry.getLink)
-    val mainPage = DocumentCacher.getDocument(link)
-    val allImages = mainPage.getElementsByTag("img").toArray.toList.asInstanceOf[List[Element]]
+    try {
+      // We need to visit the main page to get the full sized image.
+      val link = new URL(entry.getLink)
+      val mainPage = DocumentCacher.getDocument(link)
+      val allImages = mainPage.getElementsByTag("img").toArray.toList.asInstanceOf[List[Element]]
 
-    // This is hacky and possibly brittle.
-    val smallImageLink = allImages.filter(_.toString.contains("alt=\"photo\"")).head.absUrl("src")
+      // This is hacky and possibly brittle.
+      val smallImageLink = allImages.filter(_.toString.contains("alt=\"photo\"")).head.absUrl("src")
 
-    // The large image has the same name, with a different code at the end. Hacky.
-    val largeImageLink = new URL(smallImageLink.replace("_z.jpg", "_b.jpg"))
-    
-    val image = DocumentCacher.getImage(largeImageLink)
+      // The large image has the same name, with a different code at the end. Hacky.
+      val largeImageLink = new URL(smallImageLink.replace("_z.jpg", "_b.jpg"))
 
-    // If we downloaded the image, return it and a callback to this function for the rest
-    // of the images. Else try again (call this function again).
-    if (image != null) UnusedImage(image, 0) #:: getImages(urls)
-    else getImages(urls)
+      val image = (DocumentCacher.getImage(largeImageLink))
+      assert(image != null)
+      Some(image)
+    } catch {
+      case _ => {
+        println("Failed to fetch image for entry %s".format(entry.getTitle))
+        nextImage
+      }
+    }
   }
+}
 
+object StreamFlickr {
+  def fromStrings(urls: String*): StreamFlickr =
+    StreamFlickr(urls.toSeq.map(url => new URL(url)))
+
+  /////////////////////////////////////////////////////////
+
+  // Some streams gathered from
+  // http://www.pixiq.com/article/50-amazing-flickr-streams
+
+  def vibrant = fromStrings(
+    "http://api.flickr.com/services/feeds/photos_public.gne?id=49598046@N00&lang=en-us&format=rss_200",
+    "http://api.flickr.com/services/feeds/photos_public.gne?id=25052563@N08&lang=en-us&format=rss_200",
+    "http://api.flickr.com/services/feeds/photos_public.gne?id=66397474@N00&lang=en-us&format=rss_200")
+
+  def conceptual = fromStrings(
+    "http://api.flickr.com/services/feeds/photos_public.gne?id=83963013@N00&lang=en-us&format=rss_200",
+    "http://api.flickr.com/services/feeds/photos_public.gne?id=23790955@N06&lang=en-us&format=rss_200",
+    "http://api.flickr.com/services/feeds/photos_public.gne?id=14535004@N04&lang=en-us&format=rss_200",
+    "http://api.flickr.com/services/feeds/photos_public.gne?id=48848351@N00&lang=en-us&format=rss_200")
 }

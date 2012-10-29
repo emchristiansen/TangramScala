@@ -1,40 +1,54 @@
-import photostream._
+import java.awt.image.BufferedImage
+import java.net.URL
 import org.scalatest.FunSuite
-import java.awt.image.BufferedImage
-import com.sun.syndication.io.SyndFeedInput
-import java.net.URL
-import com.sun.syndication.io.XmlReader
-import com.sun.syndication.feed.synd.SyndEntry
+import com.sun.syndication.io.{ SyndFeedInput, XmlReader }
+import photostream.{ Run, Wallpaper }
 import photostream.styles.Block
- 
-import org.jsoup._
-import org.jsoup.nodes._
-import javax.imageio.ImageIO
-import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.awt.image.BufferedImage
-import photostream.UnusedImage
-import scala.collection.immutable.Stream.consWrapper
+import com.googlecode.flickrjandroid.Flickr
+import com.googlecode.flickrjandroid.REST
+
+///////////////////////////////////////////////////////////
 
 class TestBlock extends FunSuite {
   ignore("make wallpaper from two images") {
-    
+
     val im0 = new BufferedImage(500, 500, BufferedImage.TYPE_BYTE_GRAY)
     val im1 = new BufferedImage(500, 500, BufferedImage.TYPE_BYTE_GRAY)
     val im2 = new BufferedImage(1000, 500, BufferedImage.TYPE_BYTE_GRAY)
-    
-    val unusedImages = Seq(im0, im1, im2).map(x => UnusedImage(x, 0)).toStream
+
+    val unusedImages = Seq(im0, im1, im2).toStream
     val wallpaper = Wallpaper(1000, 1000)
-    
-    Run.updateRunner(40000, Block.full, wallpaper, unusedImages)
+
+//    Run.updateRunner(40000, Block.full, wallpaper, unusedImages)
   }
-  
+
   test("blah") {
     val sfi = new SyndFeedInput
-    val url = new URL("http://feeds.feedburner.com/bingimages")
-//    val url = new URL("http://www.google.com/reader/atom/feed/http://feeds.feedburner.com/bingimages?n=1000")
+    val url = new URL("http://api.flickr.com/services/feeds/photos_public.gne?id=49598046@N00&lang=en-us&format=rss_200")
+    //    val url = new URL("http://www.google.com/reader/atom/feed/http://feeds.feedburner.com/bingimages?n=1000")
     val feed = sfi.build(new XmlReader(url))
     println(feed.getEntries.size)
+  }
+
+  ignore("flickr api") {
+    val apiKey = "3866899f6a37765e54a51430ac201867"
+    val apiSecret = "534e73ed854fc635"
+    val f = new Flickr(apiKey, apiSecret, new REST)
+    
+    println(f.getPoolsInterface.getPhotos("Architecture", Array(), 100, 1))
+    
+//    f.getPoolsInterface.getPhotos(x$1, x$2, x$3, x$4)
+    
+    val user = f.getPeopleInterface.findByUsername("heyoka")
+    
+    println(user.getPhotosCount)
+    
+//    val photosetID = "http://www.flickr.com/photos/49598046@N00/sets/72157622991683276/"
+//    val list = f.getPhotosetsInterface.getPhotos(photosetID, 100, 1)
+//    println(list)
+    
+//    val testInterface = f.getTestInterface()
+//    testInterface.e
+//    val results = testInterface.echo(Collections.EMPTY_LIST)
   }
 }
