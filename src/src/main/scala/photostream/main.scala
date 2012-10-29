@@ -16,20 +16,6 @@ import com.twitter.util.Eval
 
 ///////////////////////////////////////////////////////////
 
-//  // Example with all available options instead of relying on the defaults
-//  val message = BoolOpt(
-//     long="message",          // Long name to use (--message)
-//     short="m",               // Short name to use (-m)
-//     default="Hello",         // Default value
-//     desc="Message to print", // Help message description
-//     enables=Nil,             // Other flags to enable if this one is enabled (single option or a Seq of options)
-//     disables=Nil,            // Other flags to disable if this one is enabled (single option or a Seq of options)
-//     invalidWith=Nil,         // Other options this flag is invalid with (they cannot be set)
-//     validWith=Nil,           // Other options that are required with this flag
-//     exclusive=false,         // Other options can be set when this option is set
-//     validate="^[a-zA-Z ,]+$" // Use a regex for validation via an implicit that converts it to: (String) => Boolean
-//  )
-
 object Main extends OptParse {
   val archiveDirectoryOption = StrOpt()
   val imageStreamOption = StrOpt(
