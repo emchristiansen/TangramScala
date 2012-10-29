@@ -25,7 +25,6 @@ object MainBuild extends Build {
       "org.scalacheck" %% "scalacheck" % "1.10.0" % "test",
       "org.scala-tools" %% "scala-stm" % "0.6",
       "net.liftweb" % "lift-json_2.9.1" % "2.4-RC1",
-//      "nebula" %% "nebula" % "0.1-SNAPSHOT",
       "com.twitter" % "util-eval" % "5.3.6",
       "org.scalanlp" %% "breeze-math" % "0.1",
       "org.scalanlp" %% "breeze-learn" % "0.1",
@@ -51,7 +50,7 @@ object MainBuild extends Build {
   def libSettings = Project.defaultSettings ++ extraResolvers ++ extraLibraryDependencies ++ scalaSettings ++ assemblySettings
 
   lazy val root = {
-    val longName = "PhotoStream"
+    val longName = "Tangram"
     val settings = libSettings ++ Seq(name := longName)
     Project(id = longName, base = file("."), settings = settings)
   }

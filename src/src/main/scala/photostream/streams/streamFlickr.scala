@@ -13,7 +13,6 @@ import photostream.{ DocumentCacher, RetryingImageStream }
 ///////////////////////////////////////////////////////////
 
 // TODO: This shares a lot of structure with StreamBing.
-// TODO: This sometimes grabs "Image doesn't exist" images.
 case class StreamFlickr(urls: Seq[URL]) extends RetryingImageStream {
   def waitBetweenAttemptsInMs = 5 * 60 * 1000
 
@@ -52,6 +51,11 @@ case class StreamFlickr(urls: Seq[URL]) extends RetryingImageStream {
 
       val image = (DocumentCacher.getImage(largeImageLink))
       assert(image != null)
+      
+      // This is a hack to exclude the "Image doesn't exist" images that
+      // Flickr sometimes serves.
+      assert(image.getWidth != 500 || image.getHeight != 374)
+      
       Some(image)
     } catch {
       case _ => {
