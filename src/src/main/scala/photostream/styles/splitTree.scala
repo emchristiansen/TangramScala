@@ -6,6 +6,14 @@ import RectangleSize._
 
 ///////////////////////////////////////////////////////////
 
+sealed trait Split
+
+object HorizontalSplit extends Split
+
+object VerticalSplit extends Split
+
+///////////////////////////////////////////////////////////
+
 sealed trait SplitTree
 
 case class SplitLeaf(image: BorderedResizedImage) extends SplitTree

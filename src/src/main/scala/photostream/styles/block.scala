@@ -3,7 +3,6 @@ package photostream.styles
 import photostream._
 import java.awt.image.BufferedImage
 import math._
-import Run.UpdateWallpaper
 import java.awt.Color
 import util._
 import scala.actors.Futures._

@@ -7,13 +7,7 @@ import photostream.HasWallpaper
 import photostream.RectangleLike
 import photostream.Wallpaper
 
-///////////////////////////////////////////////////////////
 
-sealed trait Split
-
-object HorizontalSplit extends Split
-
-object VerticalSplit extends Split
 
 ///////////////////////////////////////////////////////////
 
