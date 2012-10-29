@@ -1,7 +1,22 @@
 import photostream._
 import org.scalatest.FunSuite
 import java.awt.image.BufferedImage
+import com.sun.syndication.io.SyndFeedInput
+import java.net.URL
+import com.sun.syndication.io.XmlReader
+import com.sun.syndication.feed.synd.SyndEntry
+import photostream.styles.Block
  
+import org.jsoup._
+import org.jsoup.nodes._
+import javax.imageio.ImageIO
+import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.awt.image.BufferedImage
+import photostream.UnusedImage
+import scala.collection.immutable.Stream.consWrapper
+
 class TestBlock extends FunSuite {
   ignore("make wallpaper from two images") {
     
@@ -13,5 +28,13 @@ class TestBlock extends FunSuite {
     val wallpaper = Wallpaper(1000, 1000)
     
     Run.updateRunner(40000, Block.full, wallpaper, unusedImages)
+  }
+  
+  test("blah") {
+    val sfi = new SyndFeedInput
+    val url = new URL("http://feeds.feedburner.com/bingimages")
+//    val url = new URL("http://www.google.com/reader/atom/feed/http://feeds.feedburner.com/bingimages?n=1000")
+    val feed = sfi.build(new XmlReader(url))
+    println(feed.getEntries.size)
   }
 }
