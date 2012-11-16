@@ -198,9 +198,9 @@ object BlockStyle extends DisplayStyle {
 
   def randomPair[A](indexed: IndexedSeq[A]): Tuple3[A, A, IndexedSeq[A]] = {
     require(indexed.size >= 2)
-
-    val IndexedSeq(firstIndex, secondIndex) =
-      (new Random).shuffle(0 until indexed.size).take(2).sorted
+    
+    val List(firstIndex, secondIndex) =
+      (new Random).shuffle((0 until indexed.size).toList).take(2).sorted
     extractPair(indexed, firstIndex, secondIndex)
   }
 

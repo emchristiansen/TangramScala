@@ -59,7 +59,7 @@ case class StreamFlickr(urls: Seq[URL]) extends RetryingImageStream {
       
       Some(image)
     } catch {
-      case _ => {
+      case _: Throwable => {
         println("Failed to fetch image for entry %s".format(entry.getTitle))
         nextImage
       }

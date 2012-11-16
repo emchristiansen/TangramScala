@@ -18,18 +18,18 @@ object MainBuild extends Build {
     libraryDependencies ++= Seq(
       "commons-lang" % "commons-lang" % "2.6",
       "org.apache.commons" % "commons-math3" % "3.0",
-      "org.apache.commons" % "commons-math" % "2.2",
+//      "org.apache.commons" % "commons-math" % "2.2",
       "commons-io" % "commons-io" % "2.3",
       "com.frugalmechanic" % "scala-optparse" % "1.0",
-      "org.scalatest" %% "scalatest" % "1.8" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.10.0" % "test",
-      "org.scala-tools" %% "scala-stm" % "0.6",
-      "net.liftweb" % "lift-json_2.9.1" % "2.4-RC1",
+      "org.scalatest" % "scalatest_2.10.0-RC2" % "2.0.M4" % "test",
+//      "org.scalacheck" %% "scalacheck" % "1.10.0" % "test",
+//      "org.scala-tools" %% "scala-stm" % "0.6",
+//      "net.liftweb" % "lift-json_2.9.1" % "2.4-RC1",
       "com.twitter" % "util-eval" % "5.3.6",
-      "org.scalanlp" %% "breeze-math" % "0.1",
-      "org.scalanlp" %% "breeze-learn" % "0.1",
-      "org.scalanlp" %% "breeze-process" % "0.1",
-      "org.scalanlp" %% "breeze-viz" % "0.1",
+      "org.scalanlp" %% "breeze-math" % "0.2-SNAPSHOT",
+//      "org.scalanlp" %% "breeze-learn" % "0.1",
+//      "org.scalanlp" %% "breeze-process" % "0.1",
+//      "org.scalanlp" %% "breeze-viz" % "0.1",
       "org.jsoup" % "jsoup" % "1.7.1",
       "rome" % "rome" % "1.0",
       "com.googlecode.flickrj-android" % "flickrj-android" % "2.0.0",
@@ -39,10 +39,13 @@ object MainBuild extends Build {
   )
 
   def scalaSettings = Seq(
-    scalaVersion := "2.9.2",
+    scalaVersion := "2.10.0-RC2",
     scalacOptions ++= Seq(
+      "-language:implicitConversions",
+      "-language:reflectiveCalls",
       "-optimize",
       "-unchecked",
+      "-feature",
       "-deprecation"
     )
   )
