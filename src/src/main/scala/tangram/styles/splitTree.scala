@@ -1,6 +1,6 @@
 package tangram.styles
 
-import photostream._
+import tangram._
 import RectangleSize._
 
 

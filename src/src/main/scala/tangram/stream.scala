@@ -26,7 +26,7 @@ object ImageStream {
 //  }
 //  
 //  def getImages: Stream[UnusedImage] = {
-//    val imageDirectory = new File("/u/echristiansen/Dropbox/scala/12Summer/photostream/data")
+//    val imageDirectory = new File("/u/echristiansen/Dropbox/scala/12Summer/tangram.data")
 //    assert(imageDirectory.exists)
 //    val files = imageDirectory.listFiles.filter(isImageFile)
 //    files.toStream.map(UnusedImage.apply)

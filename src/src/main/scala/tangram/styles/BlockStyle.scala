@@ -1,16 +1,16 @@
 package tangram.styles
 
-import photostream._
+import tangram._
 import java.awt.image.BufferedImage
 import math._
 import java.awt.Color
 import util._
 import scala.actors.Futures._
-import photostream.BorderedResizedImage
-import photostream.Constraints
-import photostream.RectangleSize
-import photostream.RectangleSize.implicitRectangleLike
-import photostream.RectangleSize.implicitSemiVectorSpace
+import tangram.BorderedResizedImage
+import tangram.Constraints
+import tangram.RectangleSize
+import tangram.RectangleSize.implicitRectangleLike
+import tangram.RectangleSize.implicitSemiVectorSpace
 
 import scala.Option.option2Iterable
 import RectangleSize._

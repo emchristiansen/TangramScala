@@ -8,7 +8,7 @@ import org.jsoup.nodes.Element
 import com.sun.syndication.feed.synd.SyndEntry
 import com.sun.syndication.io.{ SyndFeedInput, XmlReader }
 
-import photostream.{ DocumentCacher, RetryingImageStream }
+import tangram.{ DocumentCacher, RetryingImageStream }
 
 ///////////////////////////////////////////////////////////
 

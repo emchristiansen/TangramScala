@@ -1,11 +1,11 @@
 package tangram.styles
 
-import photostream._
+import tangram._
 import RectangleSize._
-import photostream.BorderedResizedImage
-import photostream.HasWallpaper
-import photostream.RectangleLike
-import photostream.Wallpaper
+import tangram.BorderedResizedImage
+import tangram.HasWallpaper
+import tangram.RectangleLike
+import tangram.Wallpaper
 
 ///////////////////////////////////////////////////////////
 

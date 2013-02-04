@@ -6,6 +6,9 @@ import scala.tools.reflect.ToolBox
 
 ///////////////////////////////////////////////////////////
 
+/**
+ * Tools for evaluating Scala source code at runtime.
+ */
 object Eval {
   /**
    * Container for blocks of import statements in Scala source code.

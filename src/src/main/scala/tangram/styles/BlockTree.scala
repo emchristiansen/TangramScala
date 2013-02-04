@@ -9,8 +9,8 @@ import scala.math.max
 
 import SplitLeaf.apply
 import SplitNode.apply
-import photostream.{BorderedResizedImage, Constraints, RectangleSize}
-import photostream.RectangleSize.{apply, implicitRectangleLike, implicitSemiVectorSpace}
+import tangram.{BorderedResizedImage, Constraints, RectangleSize}
+import tangram.RectangleSize.{apply, implicitRectangleLike, implicitSemiVectorSpace}
 
 ///////////////////////////////////////////////////////////
 

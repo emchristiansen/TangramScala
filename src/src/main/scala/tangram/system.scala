@@ -35,7 +35,7 @@ object Display {
 
 object Runtime {
   // TODO: Make system agnostic
-  val wallpaperFile = new File("/tmp/photostream_wallpaper.png")
+  val wallpaperFile = new File("/tmp/tangram.wallpaper.png")
 
   def runSystemCommand(command: String): String = {
     println("running system command: %s".format(command))

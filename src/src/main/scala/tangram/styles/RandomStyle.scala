@@ -1,9 +1,9 @@
 package tangram.styles
 
-import photostream._
+import tangram._
 import java.awt.Color
 import scala.util.Random
-import photostream.UnusedImage
+import tangram.UnusedImage
 
 ///////////////////////////////////////////////////////////
 

@@ -7,7 +7,7 @@ import java.util.Date
 
 import org.jsoup.nodes.Element
 
-import photostream.{ DocumentCacher, RetryingImageStream }
+import tangram.{ DocumentCacher, RetryingImageStream }
 
 ///////////////////////////////////////////////////////////
 

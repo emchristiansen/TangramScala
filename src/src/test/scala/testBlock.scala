@@ -2,17 +2,17 @@ import java.awt.image.BufferedImage
 import java.net.URL
 import org.scalatest.FunSuite
 import com.sun.syndication.io.{ SyndFeedInput, XmlReader }
-import photostream._
-import photostream.styles.BlockStyle
+import tangram._
+import tangram.styles.BlockStyle
 import com.googlecode.flickrjandroid.Flickr
 import com.googlecode.flickrjandroid.REST
 import scala.runtime.RichInt
 import com.twitter.util.Eval
 
-import photostream.QuickImplicit._
-import photostream.Foo1._
-import photostream.Bar1._
-import photostream.Bar2._
+import tangram.QuickImplicit._
+import tangram.Foo1._
+import tangram.Bar1._
+import tangram.Bar2._
 
 ///////////////////////////////////////////////////////////
 
