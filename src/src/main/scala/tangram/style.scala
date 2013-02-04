@@ -6,10 +6,14 @@ import java.io.File
 
 ///////////////////////////////////////////////////////////
 
+/**
+ * Takes a Wallpaper and an ImageStream and returns an updated Wallpaper
+ * and ImageStream.
+ */
 trait DisplayStyle {
   def updateWallpaper: DisplayStyle.UpdateWallpaper
 }
 
 object DisplayStyle {
-  type UpdateWallpaper = (Wallpaper, Stream[UnusedImage]) => Tuple2[Wallpaper, Stream[UnusedImage]]
+  type UpdateWallpaper = (Wallpaper, ImageStream) => (Wallpaper, ImageStream)
 }

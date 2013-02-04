@@ -10,45 +10,79 @@ import styles._
 
 ///////////////////////////////////////////////////////////
 
-object Display {
+/**
+ * Tools for setting wallpaper images.
+ */
+object DisplayUtil {
+  /**
+   * The appropriate size of the wallpaper.
+   */
   // TODO: Make this reflect the size of the desktop, which is actually smaller
   // than the screen resolution, owing to possible bars at the top or bottom.
-  val (wallpaperWidth, wallpaperHeight) = {
+  val wallpaperSize = {
     val screenSize = Toolkit.getDefaultToolkit.getScreenSize
-    (screenSize.width, screenSize.height)
+    RectangleSize(screenSize.width, screenSize.height)
   }
 
-  def refreshWallpaper {
-    val command = "gsettings set org.gnome.desktop.background picture-uri file://%s".format(Runtime.wallpaperFile)
-    Runtime.runSystemCommand(command)
-  }
-
+  /**
+   * Sets a given image as the wallpaper.
+   */
   def setWallpaper(image: BufferedImage) {
-    require(image.getWidth == wallpaperWidth)
-    require(image.getHeight == wallpaperHeight)
+    require(image.getWidth == wallpaperSize.width)
+    require(image.getHeight == wallpaperSize.height)
     ImageIO.write(image, "png", Runtime.wallpaperFile)
 
-    // TODO
+    // TODO: Make platform agnostic.
+    def refreshWallpaper {
+      val command =
+        s"gsettings set org.gnome.desktop.background picture-uri file://${Runtime.wallpaperFile}"
+      Runtime.runSystemCommand(command)
+    }
+
     refreshWallpaper
   }
 }
 
-object Runtime {
-  // TODO: Make system agnostic
-  val wallpaperFile = new File("/tmp/tangram.wallpaper.png")
+/**
+ * Tools for interacting with the system.
+ */
+object RuntimeUtil {
+  val homeDirectory = new File(System.getProperty("user.home"))
+  
+  /**
+   * The Tangram directory, located in ~/.tangram.
+   * Automatically created if it doesn't already exist.
+   */
+  val tangramDirectory = {
+    val directory = new File(homeDirectory, ".tangram")
+    if (!directory.exists || !directory.isDirectory)
+      directory.mkdir
+    directory
+  }
+
+  /**
+   * Where the final wallpaper is saved to be used by the system.
+   */
+  val wallpaperFile = {
+    new File(tangramDirectory, "wallpaper.png")
+  }
 
   def runSystemCommand(command: String): String = {
-    println("running system command: %s".format(command))
+    println(s"Running system command: ${command}")
     try {
       val out = sys.process.Process(command).!!
-      println("successfully ran system command")
+      println("Successfully ran system command")
       out
     } catch {
-      case e: Exception => throw new Exception("system command failed: %s\nException was %s\n".format(command, e.toString))
+      case e: Exception => 
+        throw new Exception(s"System command failed: ${command}\nException was ${e}\n")
     }
   }
 }
 
+/**
+ * Contains the main loop used to update the wallpaper.
+ */
 // TODO: Rename
 object Run {
   def updateRunner(
@@ -56,7 +90,7 @@ object Run {
     updateWallpaper: DisplayStyle.UpdateWallpaper,
     wallpaper: Wallpaper,
     imageStream: Stream[BufferedImage]) {
-    
+
     @tailrec
     def refresh(wallpaper: Wallpaper, images: Stream[UnusedImage]) {
       val (newWallpaper, newImages) = updateWallpaper(wallpaper, images)

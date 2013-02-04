@@ -6,14 +6,19 @@ import java.io.File
 
 ///////////////////////////////////////////////////////////
 
+/**
+ * An image that has not yet been used in a Tangram.
+ * |numMisses| is the number of times the image has been passed over.
+ */
 case class UnusedImage(image: BufferedImage, numMisses: Int)
 
-object UnusedImage {
-//  def apply(file: File): UnusedImage = UnusedImage(ImageIO.read(file), 0)
-  
+object UnusedImage {  
   def apply(image: BufferedImage): UnusedImage = UnusedImage(image, 0)
 }
 
+/**
+ * A provider of a potentially unlimited number of images.
+ */
 trait ImageStream {
   def imageStream: Stream[BufferedImage]
 }
@@ -33,17 +38,23 @@ object ImageStream {
 //  }
 }
 
+/**
+ * An image stream that sleeps then retries when it cannot get the next
+ * image.
+ */
 trait RetryingImageStream extends ImageStream {
-  def waitBetweenAttemptsInMs: Int
+  def waitBetweenAttemptsInSeconds: Int
   
   def nextImage: Option[BufferedImage]
+  
+  /////////////////////////////////////////////////////////
   
   override def imageStream = {
     val imageOption = nextImage
     if (imageOption.isDefined) imageOption.get #:: imageStream
     else {
-      println("No new images in stream, sleeping %sms".format(waitBetweenAttemptsInMs))
-      Thread.sleep(waitBetweenAttemptsInMs)
+      println(s"No new images in stream, sleeping ${waitBetweenAttemptsInSeconds}s")
+      Thread.sleep(waitBetweenAttemptsInSeconds * 1000)
       imageStream
     }
   }
