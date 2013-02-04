@@ -1,4 +1,4 @@
-package photostream.styles
+package tangram.styles
 
 import java.awt.image.BufferedImage
 

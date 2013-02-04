@@ -1,4 +1,4 @@
-package photostream
+package tangram
 
 import org.jsoup._
 import org.jsoup.nodes._
@@ -12,7 +12,6 @@ import java.io.File
 import photostream.streams.StreamBing
 import photostream.styles.BlockStyle
 import photostream.streams.StreamFlickr
-import com.twitter.util.Eval
 
 ///////////////////////////////////////////////////////////
 
@@ -27,16 +26,16 @@ object Main extends OptParse {
   def main(args: Array[String]) {
     parse(args)
 
-    def interpretString[A : Manifest](expression: String): A = {
-      val source = "import photostream.streams._; import photostream.styles._; val value: %s = %s; value".format(
-        implicitly[Manifest[A]],
-        expression)
-      (new Eval).apply[A](source)
-    }
+//    def interpretString[A : Manifest](expression: String): A = {
+//      val source = "import photostream.streams._; import photostream.styles._; val value: %s = %s; value".format(
+//        implicitly[Manifest[A]],
+//        expression)
+//      (new Eval).apply[A](source)
+//    }
 
     val imageStream = {
       // The image stream is JIT compiled based on the command-line argument.
-      val unwrapped = interpretString[ImageStream](imageStreamOption.get)
+      val unwrapped = Eval.eval[ImageStream](imageStreamOption.get)
 
       // This wraps the stream in such a way that getting the next
       // image also writes it to disk.
@@ -53,7 +52,7 @@ object Main extends OptParse {
       })
     }
 
-    val style = interpretString[DisplayStyle](styleOption.get)
+    val style = Eval.eval[DisplayStyle](styleOption.get)
 
     val refreshDelay = refreshDelayOption.getOrElse(60)
     require(refreshDelay >= 0)

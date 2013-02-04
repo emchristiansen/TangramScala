@@ -1,4 +1,4 @@
-package photostream.streams
+package tangram.streams
 
 import java.awt.image.BufferedImage
 import java.net.URL

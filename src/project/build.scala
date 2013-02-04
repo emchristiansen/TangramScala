@@ -17,6 +17,9 @@ object MainBuild extends Build {
     libraryDependencies ++= Seq(
 //      "commons-lang" % "commons-lang" % "2.6",
       "org.apache.commons" % "commons-math3" % "3.0",
+      "org.scala-lang" % "scala-reflect" % "2.10.0",
+      "org.scala-lang" % "scala-compiler" % "2.10.0",
+      "org.scala-lang" % "scala-actors" % "2.10.0",
 //      "org.apache.commons" % "commons-math" % "2.2",
 //      "commons-io" % "commons-io" % "2.3",
       "com.frugalmechanic" % "scala-optparse" % "1.1",

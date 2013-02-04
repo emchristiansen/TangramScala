@@ -1,4 +1,4 @@
-package photostream
+package tangram
 
 import breeze.linalg.DenseMatrix
 import java.awt.image.BufferedImage
