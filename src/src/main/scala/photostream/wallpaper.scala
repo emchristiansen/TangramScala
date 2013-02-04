@@ -5,6 +5,8 @@ import java.awt.image.BufferedImage
 
 import math.min
 
+///////////////////////////////////////////////////////////
+
 trait HasWallpaper {
   def wallpaper: Wallpaper
 }

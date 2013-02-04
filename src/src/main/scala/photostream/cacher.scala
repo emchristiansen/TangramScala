@@ -11,6 +11,7 @@ import java.net.SocketTimeoutException
 ///////////////////////////////////////////////////////////
 
 // Caches pages locally to avoid lots of web activity. Pages eventually expire.
+// TODO: This should be implicit, not global.
 object DocumentCacher {
   val shelfLifeInSeconds = 60 * 60
 

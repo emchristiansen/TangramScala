@@ -25,13 +25,20 @@ case class Constraints(
   require(maxAspectWarp >= 1)
 }
 
+trait Relaxations {
+  def noRelaxations: Stream[Constraints]
+
+  def relaxations: Stream[Constraints]
+}
+
 object Constraints {
   // It is useful to start with strong constraints and gradually
-  // relax them if a solution is not initially found.
-  implicit def addRelaxations(self: Constraints) = new {
+  // relax them if a solution is not initially found. 
+  implicit def Constraints2Relaxations(self: Constraints) = new Relaxations {
     def noRelaxations: Stream[Constraints] = Stream.iterate(self)(identity)
-    
+
     def relaxations: Stream[Constraints] = {
+      // TODO: This should eventually become adjustable.
       def relax(constraint: Constraints): Constraints = Constraints(
         (constraint.minAbsoluteSize * .95).round.toInt,
         constraint.minRelativeSize * .95,
