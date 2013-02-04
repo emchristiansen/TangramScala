@@ -20,6 +20,7 @@ object MainBuild extends Build {
       "org.scala-lang" % "scala-reflect" % "2.10.0",
       "org.scala-lang" % "scala-compiler" % "2.10.0",
       "org.scala-lang" % "scala-actors" % "2.10.0",
+      "org.imgscalr" % "imgscalr-lib" % "4.2",
 //      "org.apache.commons" % "commons-math" % "2.2",
 //      "commons-io" % "commons-io" % "2.3",
       "com.frugalmechanic" % "scala-optparse" % "1.1",

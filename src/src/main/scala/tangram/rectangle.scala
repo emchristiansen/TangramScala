@@ -3,10 +3,10 @@ package tangram
 ///////////////////////////////////////////////////////////
 
 /**
- * Anything that supports "+" and has a zero element.
+ * Anything that supports |plus| and has a zero element.
  */
 trait Monoid[T] {
-  def +(that: T): T
+  def plus(that: T): T
   def zero: T
 }
 
@@ -26,7 +26,7 @@ case class RectangleSize(width: Int, height: Int) {
 
 object RectangleSize {
   implicit class RectangleSize2SemiVectorSpace(self: RectangleSize) extends SemiVectorSpace[RectangleSize] {
-    override def +(that: RectangleSize) = RectangleSize(
+    override def plus(that: RectangleSize) = RectangleSize(
       self.width + that.width,
       self.height + that.height)
       

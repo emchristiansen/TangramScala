@@ -41,6 +41,9 @@ object BorderedRenderable {
 
   implicit class BorderedRenderable2Renderable[R <% Renderable](
     self: BorderedRenderable[R]) extends Renderable {
+    override def size = self.renderable.size plus
+      RectangleSize(2 * self.border.width, 2 * self.border.width)
+
     override def render = {
       val noBorder = self.renderable.render
       addBorder(self.border, noBorder)

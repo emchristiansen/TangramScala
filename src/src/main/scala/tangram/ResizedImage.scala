@@ -27,6 +27,8 @@ object ResizedImage {
 
   implicit class ResizedImage2Renderable(
       self: ResizedImage) extends Renderable {
+    override def size = self.size
+    
     /**
      * Resize the original image to have the target size, and return the
      * result as a BufferedImage.
@@ -57,8 +59,8 @@ object ResizedImage {
       }
 
       val originalSize = RectangleSize(
-        originalImage.getWidth,
-        originalImage.getHeight)
+        self.originalImage.getWidth,
+        self.originalImage.getHeight)
 
       val scaleFactor = if (originalSize.aspect > self.size.aspect) {
         // Make the heights match.
@@ -68,7 +70,7 @@ object ResizedImage {
         self.size.width.toDouble / originalSize.width
       }
 
-      val scaled = scale(originalImage, scaleFactor)
+      val scaled = scale(scaleFactor, self.originalImage)
 
       // Crop off the extra bits.
       val extraWidth = scaled.getWidth - self.size.width

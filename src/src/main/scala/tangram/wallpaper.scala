@@ -110,7 +110,7 @@ object Wallpaper {
     //      }
     //    }
 
-    def insert[R <% Renderable](image: R, position: Position): Wallpaper[R] = {
+    def insert(image: R, position: Position): Wallpaper[R] = {
       val newPixel = WallpaperPixel(image, position, new Date())
 
       val cappedWidth = min(image.size.width, self.size.width - position.x)

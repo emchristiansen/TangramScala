@@ -6,7 +6,7 @@ import java.io.File
 import java.awt.Toolkit
 import scala.annotation.tailrec
 
-import styles._
+
 
 ///////////////////////////////////////////////////////////
 
@@ -30,13 +30,13 @@ object DisplayUtil {
   def setWallpaper(image: BufferedImage) {
     require(image.getWidth == wallpaperSize.width)
     require(image.getHeight == wallpaperSize.height)
-    ImageIO.write(image, "png", Runtime.wallpaperFile)
+    ImageIO.write(image, "png", RuntimeUtil.wallpaperFile)
 
     // TODO: Make platform agnostic.
     def refreshWallpaper {
       val command =
-        s"gsettings set org.gnome.desktop.background picture-uri file://${Runtime.wallpaperFile}"
-      Runtime.runSystemCommand(command)
+        s"gsettings set org.gnome.desktop.background picture-uri file://${RuntimeUtil.wallpaperFile}"
+      RuntimeUtil.runSystemCommand(command)
     }
 
     refreshWallpaper
@@ -85,24 +85,26 @@ object RuntimeUtil {
  */
 // TODO: Rename
 object Run {
-  def updateRunner(
+  def updateRunner[R <% Renderable](
     minDelayInMilliseconds: Int,
-    updateWallpaper: DisplayStyle.UpdateWallpaper,
-    wallpaper: Wallpaper,
-    imageStream: Stream[BufferedImage]) {
+    updateWallpaper: DisplayStyle.UpdateWallpaper[R],
+    wallpaper: Wallpaper[R],
+    imageStream: ImageStream) {
 
     @tailrec
-    def refresh(wallpaper: Wallpaper, images: Stream[UnusedImage]) {
+    def refresh(
+        wallpaper: Wallpaper[R], 
+        images: ImageStream) {
       val (newWallpaper, newImages) = updateWallpaper(wallpaper, images)
       // The updater must do something.
       assert(newWallpaper != wallpaper)
       assert(newImages != images)
-      Display.setWallpaper(newWallpaper.render)
+      DisplayUtil.setWallpaper(newWallpaper.render)
       println("sleeping for %dms".format(minDelayInMilliseconds))
       Thread.sleep(minDelayInMilliseconds)
       refresh(newWallpaper, newImages)
     }
 
-    refresh(wallpaper, imageStream.map(UnusedImage.apply))
+    refresh(wallpaper, imageStream)
   }
 }
