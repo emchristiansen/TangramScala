@@ -5,6 +5,8 @@ import java.awt.image.BufferedImage
 import java.io.File
 import java.awt.Toolkit
 import scala.annotation.tailrec
+import tangram.style.DisplayStyle
+import tangram.stream.ImageStream
 
 
 
@@ -27,9 +29,11 @@ object DisplayUtil {
   /**
    * Sets a given image as the wallpaper.
    */
-  def setWallpaper(image: BufferedImage) {
-    require(image.getWidth == wallpaperSize.width)
-    require(image.getHeight == wallpaperSize.height)
+  def setWallpaper[R <% Renderable](renderable: R) {
+    require(renderable.size.width == wallpaperSize.width)
+    require(renderable.size.height == wallpaperSize.height)
+    
+    val image = renderable.render
     ImageIO.write(image, "png", RuntimeUtil.wallpaperFile)
 
     // TODO: Make platform agnostic.
@@ -85,21 +89,21 @@ object RuntimeUtil {
  */
 // TODO: Rename
 object Run {
-  def updateRunner[R <% Renderable](
+  def updateRunner[R <% Renderable, I <% ImageStream](
     minDelayInMilliseconds: Int,
-    updateWallpaper: DisplayStyle.UpdateWallpaper[R],
+    updateWallpaper: DisplayStyle.UpdateWallpaper[R, I],
     wallpaper: Wallpaper[R],
-    imageStream: ImageStream) {
+    imageStream: I) {
 
     @tailrec
     def refresh(
         wallpaper: Wallpaper[R], 
-        images: ImageStream) {
+        images: I) {
       val (newWallpaper, newImages) = updateWallpaper(wallpaper, images)
       // The updater must do something.
       assert(newWallpaper != wallpaper)
       assert(newImages != images)
-      DisplayUtil.setWallpaper(newWallpaper.render)
+      DisplayUtil.setWallpaper(newWallpaper)
       println("sleeping for %dms".format(minDelayInMilliseconds))
       Thread.sleep(minDelayInMilliseconds)
       refresh(newWallpaper, newImages)

@@ -37,7 +37,8 @@ object MainBuild extends Build {
       "com.googlecode.flickrj-android" % "flickrj-android" % "2.0.4",
       "org.json" % "json" % "20090211",
       "org.spire-math" %% "spire" % "0.3.0-RC1",
-      "com.typesafe" %% "scalalogging-slf4j" % "1.0.1"
+      "com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
+      "com.chuusai" % "shapeless_2.10.0-RC5" % "1.2.4-SNAPSHOT"
 //      "org.slf4j" % "slf4j-api" % "1.6.6"
     )
   )

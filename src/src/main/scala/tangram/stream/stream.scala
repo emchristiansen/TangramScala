@@ -1,8 +1,7 @@
-package tangram
+package tangram.stream
 
-import javax.imageio.ImageIO
 import java.awt.image.BufferedImage
-import java.io.File
+import scala.collection.immutable.Stream.consWrapper
 
 ///////////////////////////////////////////////////////////
 
