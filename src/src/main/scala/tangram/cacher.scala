@@ -8,6 +8,7 @@ import org.jsoup.nodes.Document
 import javax.imageio.ImageIO
 import java.net.SocketTimeoutException
 import shapeless._
+import scala.util.Try
 
 ///////////////////////////////////////////////////////////
 
@@ -27,15 +28,37 @@ object CachedObject {
   }
 }
 
+trait DirectFetcher[V] {
+  def fetch: Option[V]
+}
+
 /**
  * A URL that points to a document.
  */
 case class DocumentURL(url: URL)
 
+object DocumentURL {
+  /**
+   * Default method for downloading a document without using the cache.
+   */
+  implicit class DocumentURLDirectFetcher(url: DocumentURL) extends DirectFetcher[Document] {
+    override def fetch = Try(Jsoup.connect(url.url.toString).get).toOption
+  }
+}
+
 /**
  * A URL that points to an image.
  */
 case class ImageURL(url: URL)
+
+object ImageURL {
+  /**
+   * Default method for downloading an image without using the cache.
+   */
+  implicit class ImageURL2DirectFetcher(url: ImageURL) extends DirectFetcher[BufferedImage] {
+    override def fetch = Try(ImageIO.read(url.url)).toOption
+  }
+}
 
 /**
  * Specifies legal type relations for use in the type-safe |WebCache|, which
@@ -77,49 +100,40 @@ object WebCache {
    */
   def tryForever[A](function: () => Option[A]): Stream[Option[A]] =
     function() #:: tryForever(function)
+    
+  /**
+   * Adds delays in the evaluation of a Stream.
+   */
+  def addDelays[A](timeInMs: Int, stream: Stream[A]) = stream match {
+    case head #:: tail => head #:: {
+      Thread.sleep(timeInMs)
+      tail
+    }
+    case Stream.Empty => Stream.Empty
+  }
 
   implicit class WebCacheOps(self: WebCache) {
-    /**
-     * Default method for downloading a document without using the cache.
-     * It's okay if this method fails.
-     */
-    implicit val getDocumentNoCache: DocumentURL => Document = url =>
-      Jsoup.connect(url.url.toString).get
-    
-    /**
-     * Default method for downloading an image without using the cache.
-     * It's okay if this method fails.
-     */
-    implicit val getBufferedImageNoCache: ImageURL => BufferedImage = url =>
-      ImageIO.read(url.url)    
-      
     /**
      * Attempts to fetch the document indicated by the URL, either from
      * local cache or from the web.
      * Returns the document, along with the updated web cache.
      */
-    def get[K, V](
+    def get[K <% DirectFetcher[V], V](
       url: K)(
-        implicit getter: K => V, 
-        webCacheRelations: WebCacheRelations[K, CachedObject[V]]): Option[(V, WebCache)] = {
+        implicit webCacheRelations: WebCacheRelations[K, CachedObject[V]]): Option[(V, WebCache)] = {
       self.cache.get(url) match {
         case Some(cached) if cached.isFresh => Some((cached.document, self))
         case _ => {
           println(s"Getting ${url}")
 
-          def tryToDownload = try {
-            Some(getter(url))
-          } catch {
-            case _: SocketTimeoutException => {
-              // Sleep 1s then give up.
-              Thread.sleep(1000)
-              None
-            }
-          }
+          def tryToDownload = url.fetch match {
+            case some@Some(_) => some
+            case None => 
+          } 
 
           // Try to download the document 8 times, then give up.
           val documentOption: Option[V] =
-            tryForever(tryToDownload _).take(8).flatten.headOption
+            addDelays(1000, tryForever(() => url.fetch)).take(8).flatten.headOption
 
           for (document <- documentOption) yield {
             val cachedObject = CachedObject(document, new Date())

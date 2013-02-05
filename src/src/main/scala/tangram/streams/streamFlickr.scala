@@ -5,17 +5,20 @@ import java.net.URL
 import org.jsoup.nodes.Element
 import com.sun.syndication.feed.synd.SyndEntry
 import com.sun.syndication.io.{ SyndFeedInput, XmlReader }
-import tangram.{ DocumentCacher }
 import tangram.stream.RetryingImageStream
+import tangram._
 
 ///////////////////////////////////////////////////////////
 
-// TODO: This shares a lot of structure with StreamBing.
-case class StreamFlickr(urls: Seq[URL]) extends RetryingImageStream {
-  override def waitBetweenAttemptsInSeconds = 5 * 60
+case class StreamFlickr(url: URL, cache: WebCache, visitedURLs: Set[URL])
 
-  // TODO: Can I avoid state entirely?
-  private val oldEntries = collection.mutable.Set[SyndEntry]()
+object StreamFlickr {
+  
+}
+
+// TODO: This shares a lot of structure with StreamBing.
+case class StreamFlickr2(urls: Seq[URL]) extends RetryingImageStream {
+  override def waitBetweenAttemptsInSeconds = 5 * 60
 
   override def nextImage: Option[BufferedImage] = {
     // Whenever we need a new image, we get the up-to-date list of images, and
@@ -65,7 +68,7 @@ case class StreamFlickr(urls: Seq[URL]) extends RetryingImageStream {
   }
 }
 
-object StreamFlickr {
+object StreamFlickr2 {
   def fromStrings(urls: String*): StreamFlickr =
     StreamFlickr(urls.toSeq.map(url => new URL(url)))
 
