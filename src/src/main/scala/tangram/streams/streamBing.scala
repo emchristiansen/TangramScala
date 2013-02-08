@@ -8,6 +8,7 @@ import org.jsoup.nodes.Element
 import tangram._
 import tangram.stream.RetryingImageStream
 import org.jsoup.nodes.Document
+import tangram.stream.RetryingImageStream
 
 ///////////////////////////////////////////////////////////
 
@@ -17,18 +18,56 @@ import org.jsoup.nodes.Document
 case class StreamBing(cache: WebCache, visitedURLs: Set[URL])
 
 trait TwoPassStream extends RetryingImageStream {
+  def getImageURLs: (Option[Set[ImageURL]], Set[ImageURL], Set[ImageURL] => TwoPassStream)
+
+  ///////////////////////////////////////////////////////////
+
+  override def noWaitingStream: Stream[Option[BufferedImage]] =
+    getImageURLs match {
+      // We couldn't fetch any image URLs.
+      case (None, _, stream) => None #:: stream(Set()).noWaitingStream
+      // We successfully fetched new image URLS.
+      case (Some(imageURLs), visitedURLs, stream) =>
+        imageURLs.filter({
+          // Remove all previously seen image URLs.
+          imageURL => !visitedURLs.contains(imageURL)
+        }).headOption match {
+          // We have seen all these image URLs.
+          case None =>
+            None #:: None #:: stream(Set()).noWaitingStream
+          // There's a new URL.
+          case Some(imageURL @ ImageURL(url)) => {
+            // We mark this url as seen regardless of whether we can 
+            // download the image.
+            val newVisitedURLs = visitedURLs + imageURL
+
+            // We don't cache the downloaded image, since we should never
+            // download the same image twice.
+            def streamTail = stream(newVisitedURLs).noWaitingStream
+            imageURL.fetch match {
+              // We couldn't download the image.
+              case None => None #:: streamTail
+              // We did download the image.	
+              case Some((image)) => Some(image) #:: streamTail
+            }
+          }
+        }
+    }
+}
+
+trait TwoPassStream2 extends RetryingImageStream {
   /**
    * A list of image URLs, sorted with the most desirable URL first.
    */
   def getImageURLs(cache: WebCache): Option[(Seq[ImageURL], WebCache)]
 
   /**
-   * 
+   *
    */
   def streamTail: (WebCache, Set[URL]) => Stream[Option[BufferedImage]]
 
   def cache: WebCache
-  
+
   def visitedURLs: Set[URL]
 
   ///////////////////////////////////////////////////////////

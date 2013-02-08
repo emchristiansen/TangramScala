@@ -41,7 +41,8 @@ object DocumentURL {
   /**
    * Default method for downloading a document without using the cache.
    */
-  implicit class DocumentURLDirectFetcher(url: DocumentURL) extends DirectFetcher[Document] {
+  implicit class DocumentURLDirectFetcher(
+    url: DocumentURL) extends DirectFetcher[Document] {
     override def fetch = Try(Jsoup.connect(url.url.toString).get).toOption
   }
 }
@@ -100,7 +101,7 @@ object WebCache {
    */
   def tryForever[A](function: () => Option[A]): Stream[Option[A]] =
     function() #:: tryForever(function)
-    
+
   /**
    * Adds delays in the evaluation of a Stream.
    */
@@ -127,9 +128,9 @@ object WebCache {
           println(s"Getting ${url}")
 
           def tryToDownload = url.fetch match {
-            case some@Some(_) => some
-            case None => 
-          } 
+            case some @ Some(_) => some
+            case None =>
+          }
 
           // Try to download the document 8 times, then give up.
           val documentOption: Option[V] =
