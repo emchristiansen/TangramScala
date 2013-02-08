@@ -15,10 +15,10 @@ import tangram.stream.RetryingImageStream
 /**
  * Used to stream the Bing image of the day.
  */
-case class StreamBing(cache: WebCache, visitedURLs: Set[URL])
+case class StreamBing(cache: WebCache, visitedURLs: Set[ImageURL])
 
 trait TwoPassStream extends RetryingImageStream {
-  def getImageURLs: (Option[Set[ImageURL]], Set[ImageURL], Set[ImageURL] => TwoPassStream)
+  def getImageURLs: (Option[Seq[ImageURL]], Set[ImageURL], Set[ImageURL] => TwoPassStream)
 
   ///////////////////////////////////////////////////////////
 
@@ -55,58 +55,10 @@ trait TwoPassStream extends RetryingImageStream {
     }
 }
 
-trait TwoPassStream2 extends RetryingImageStream {
-  /**
-   * A list of image URLs, sorted with the most desirable URL first.
-   */
-  def getImageURLs(cache: WebCache): Option[(Seq[ImageURL], WebCache)]
-
-  /**
-   *
-   */
-  def streamTail: (WebCache, Set[URL]) => Stream[Option[BufferedImage]]
-
-  def cache: WebCache
-
-  def visitedURLs: Set[URL]
-
-  ///////////////////////////////////////////////////////////
-
-  override def noWaitingImageStream = {
-    getImageURLs(cache) match {
-      case None => None #:: streamTail(cache, visitedURLs)
-      case Some((imageURLs, newCache)) => {
-        imageURLs.filter({
-          case ImageURL(url) => !visitedURLs.contains(url)
-        }).headOption match {
-          case None =>
-            None #:: streamTail(newCache, visitedURLs)
-          case Some(imageURL @ ImageURL(url)) => {
-            // We mark this url as seen regardless of whether we can 
-            // download the image.
-            val newVisitedURLs = visitedURLs + url
-
-            // We don't cache the downloaded image, since we should never
-            // download the same image twice.
-            def streamTailFinal =
-              streamTail(newCache, newVisitedURLs)
-            imageURL.fetch match {
-              case None => None #:: streamTailFinal
-              case Some((image)) => Some(image) #:: streamTailFinal
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
 object StreamBing {
-  implicit class StreamBing2ImageStream(
-    self: StreamBing) extends RetryingImageStream {
-    override def waitBetweenAttemptsInSeconds = 5 * 60
-
-    override def noWaitingImageStream = {
+  implicit class StreamBing2TwoPassStream(
+    self: StreamBing) extends TwoPassStream {
+    override def getImageURLs = {
       // This URL has links to (all?) the Bing images of the day.
       // Thanks to the following for the URL:
       // http://dgoins.wordpress.com/2011/06/27/changing-the-gnome-3-desktop-with-images-from-bing/
@@ -116,7 +68,12 @@ object StreamBing {
       // Whenever we need a new image, we get the up-to-date list of images, and
       // return the newest one that we haven't already used.
       self.cache.get(DocumentURL(bingURL)) match {
-        case None => None #:: self.noWaitingImageStream
+        // We could not fetch any image URLs.
+        case None => (
+          None,
+          self.visitedURLs,
+          visitedURLs => self.copy(visitedURLs = visitedURLs))
+        // We did fetch image URLs.
         case Some((doc, newCache)) => {
           // Each URL is in an "item"
           val items = doc.getElementsByTag("item").toArray.toList.asInstanceOf[List[Element]]
@@ -133,32 +90,12 @@ object StreamBing {
               new URL(string.replace(" ", "%20"))
             }
 
-            (date, url)
-          }) filter {
-            // We want the most recent image we haven't used.
-            case (date, url) => !self.visitedURLs.contains(url)
-          }
+            (date, ImageURL(url))
+          })
 
-          // If there's no new content, we return None and recurse using
-          // the updated cache.
-          datesAndURLs.sortBy(_._1).reverse.headOption match {
-            case None =>
-              None #:: self.copy(cache = newCache).noWaitingImageStream
-            case Some((_, url)) => {
-              // We mark this url as seen regardless of whether we can 
-              // download the image.
-              val newVisitedURLs = self.visitedURLs + url
-
-              // We don't cache the downloaded image, since we should never
-              // download the same image twice.
-              def streamTail =
-                StreamBing(newCache, newVisitedURLs).noWaitingImageStream
-              ImageURL(url).fetch match {
-                case None => None #:: streamTail
-                case Some((image)) => Some(image) #:: streamTail
-              }
-            }
-          }
+          (Some(datesAndURLs.sortBy(_._1).reverse.map(_._2)),
+            self.visitedURLs,
+            visitedURLs => StreamBing(newCache, visitedURLs))
         }
       }
     }
