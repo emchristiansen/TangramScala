@@ -1,1 +1,3 @@
-Not yet ready for prime time.
+A simple application for automatically updating your desktop wallpaper based on online image streams. Unlike other applications in this space, Tangram can create large wallpapers from a mosaic of smaller images without distorting those images (see the examples folder). Creating a rectangular wallpaper from a set of mixed-sized images is the (NP-hard) 2D packing problem, and the main contribution of this work is a fast approximation which produces visually pleasing results.
+
+This code is still in alpha.
