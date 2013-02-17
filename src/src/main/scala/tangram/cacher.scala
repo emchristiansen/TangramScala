@@ -28,6 +28,9 @@ object CachedObject {
   }
 }
 
+/**
+ * Tries to retrieve something of the indicated type.
+ */
 trait DirectFetcher[V] {
   def fetch: Option[V]
 }
@@ -95,6 +98,11 @@ object WebCacheRelations {
 case class WebCache(cache: HMap[WebCacheRelations])
 
 object WebCache {
+  /**
+   * Initialize and empty WebCache.
+   */
+  def apply(): WebCache = WebCache(new HMap[WebCacheRelations])
+  
   /**
    * Expresses repeated attempts at evaluating a failure-prone function
    * as an infinite stream.

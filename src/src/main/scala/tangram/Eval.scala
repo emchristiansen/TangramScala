@@ -3,6 +3,8 @@ package tangram
 import reflect.runtime.universe
 import reflect.runtime.universe._
 import scala.tools.reflect.ToolBox
+import org.apache.commons.io.FileUtils
+import scala.util.{Try, Success, Failure}
 
 ///////////////////////////////////////////////////////////
 
@@ -38,7 +40,21 @@ object Eval {
       val importString = formattedImports.toList.sorted.mkString("\n")
       importString + "\n\n" + source
     }
-  }  
+  }
+  
+  /**
+   * Pimp to include extra source at the top of a file.
+   * Similar to C-style #include 
+   */
+  implicit class AddIncludeToSource(source: String) {
+    def include(header: String): String = 
+      s"${header}\n\n//ABOVE CODE AUTOMATICALLY INCLUDED\n\n${source}"
+      
+    def include(files: Seq[ExistingFile]): String = {
+      val headers = files map (_.file) map FileUtils.readFileToString
+      include(headers mkString "\n\n//FILE DIVIDER\n\n")
+    }
+  }
   
   ///////////////////////////////////////////////////////////
   
@@ -84,6 +100,9 @@ result
     toolbox.compile(toolbox.parse(source)).asInstanceOf[() => A]
   }
 
+  def hasType[A: TypeName](expression: String): Boolean = 
+    Try(typeCheck[A](expression)).isSuccess
+  
   /**
    * Type checks and evaluates a given expression.
    */

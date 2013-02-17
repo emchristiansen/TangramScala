@@ -4,6 +4,8 @@ import Keys._
 import sbtassembly.Plugin._
 import AssemblyKeys._
 
+import com.typesafe.sbt.SbtStartScript
+
 object MainBuild extends Build {
   def extraResolvers = Seq(
     resolvers ++= Seq(
@@ -16,7 +18,10 @@ object MainBuild extends Build {
   def extraLibraryDependencies = Seq(
     libraryDependencies ++= Seq(
 //      "commons-lang" % "commons-lang" % "2.6",
+      "com.nativelibs4java" %% "scalaxy-debug" % "0.3-SNAPSHOT" % "provided",
+      "org.rogach" %% "scallop" % "0.8.0",
       "org.apache.commons" % "commons-math3" % "3.0",
+      "commons-io" % "commons-io" % "2.4",
       "org.scala-lang" % "scala-reflect" % "2.10.0",
       "org.scala-lang" % "scala-compiler" % "2.10.0",
       "org.scala-lang" % "scala-actors" % "2.10.0",
@@ -56,7 +61,12 @@ object MainBuild extends Build {
     )
   )
 
-  def libSettings = Project.defaultSettings ++ extraResolvers ++ extraLibraryDependencies ++ scalaSettings ++ assemblySettings
+  // def compiletsSettings = Seq(
+  //   autoCompilets := true,
+  //   addDefaultCompilets()
+  // )
+
+  def libSettings = Project.defaultSettings ++ extraResolvers ++ extraLibraryDependencies ++ scalaSettings ++ assemblySettings ++ SbtStartScript.startScriptForJarSettings
 
   lazy val root = {
     val longName = "Tangram"
