@@ -4,7 +4,7 @@ import reflect.runtime.universe
 import reflect.runtime.universe._
 import scala.tools.reflect.ToolBox
 import org.apache.commons.io.FileUtils
-import scala.util.{Try, Success, Failure}
+import scala.util.{ Try, Success, Failure }
 
 ///////////////////////////////////////////////////////////
 
@@ -19,7 +19,7 @@ object Eval {
 
   object Imports {
     def apply(packages: String*): Imports = Imports(packages.toSet)
-    
+
     implicit def toSetString(self: Imports): Set[String] = self.packages
   }
 
@@ -27,9 +27,9 @@ object Eval {
    * Default imports needed to build against Tangram.
    */
   implicit val allImports = Imports(
-      "tangram._", 
-      "tangram.streams._", 
-      "tangram.styles._")
+    "tangram._",
+    "tangram.streams._",
+    "tangram.styles._")
 
   /**
    * Pimp to add a set of imports to the top of a source code string.
@@ -41,23 +41,23 @@ object Eval {
       importString + "\n\n" + source
     }
   }
-  
+
   /**
    * Pimp to include extra source at the top of a file.
-   * Similar to C-style #include 
+   * Similar to C-style #include
    */
   implicit class AddIncludeToSource(source: String) {
-    def include(header: String): String = 
-      s"${header}\n\n//ABOVE CODE AUTOMATICALLY INCLUDED\n\n${source}"
-      
+    def include(header: String): String =
+      s"${header}\n\n// ABOVE CODE AUTOMATICALLY INCLUDED\n\n${source}"
+
     def include(files: Seq[ExistingFile]): String = {
       val headers = files map (_.file) map FileUtils.readFileToString
       include(headers mkString "\n\n//FILE DIVIDER\n\n")
     }
   }
-  
+
   ///////////////////////////////////////////////////////////
-  
+
   /**
    * Represents the name of a type as a string.
    */
@@ -75,7 +75,7 @@ object Eval {
    */
   def typeName[A: TypeName] = implicitly[TypeName[A]]
 
-  implicit def typeTag2TypeName[A: TypeTag]: TypeName[A] = 
+  implicit def typeTag2TypeName[A: TypeTag]: TypeName[A] =
     TypeName(typeTag[A].tpe.toString)
 
   ///////////////////////////////////////////////////////////
@@ -91,18 +91,28 @@ val result: ${typeName[A]} = {${expression}}
 result
     """
 
-    println(source)
-
     // From http://stackoverflow.com/questions/12122939/generating-a-class-from-string-and-instantiating-it-in-scala-2-10/12123609#12123609
     val cm = universe.runtimeMirror(getClass.getClassLoader)
     val toolbox = cm.mkToolBox()
 
-    toolbox.compile(toolbox.parse(source)).asInstanceOf[() => A]
+    try {
+      toolbox.compile(toolbox.parse(source)).asInstanceOf[() => A]
+    } catch {
+      case e: Any => {
+        val sourceHeader = "// BEGIN: THIS SOURCE FAILED TO COMPILE"
+          val sourceFooter = "// END: THIS SOURCE FAILED TO COMPILE"
+        println(Seq(
+            sourceHeader, 
+            source, 
+            sourceFooter) mkString("\n"))
+        throw e
+      }
+    }
   }
 
-  def hasType[A: TypeName](expression: String): Boolean = 
-    Try(typeCheck[A](expression)).isSuccess
-  
+//  def hasType[A: TypeName](expression: String): Boolean =
+//    Try(typeCheck[A](expression)).isSuccess
+
   /**
    * Type checks and evaluates a given expression.
    */

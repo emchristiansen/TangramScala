@@ -20,7 +20,7 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
 
   val imageStream = opt[String](
     descr = "Scale expression with implicit view to ImageStream. The ImageStream controls which images will be fetched.",
-    default = Some("StreamFlickr.vibrant"))
+    default = Some("StreamBing()"))
 
   val style = opt[String](
     descr = "Scale expression with implicit view to DisplayStyle. The DisplayStyle controls how sets of images are arranged into a larger image.",
@@ -29,7 +29,11 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
   val extraSourceFiles = opt[List[String]](
     descr = "Extra Scala source files to compile against at runtime. Use this to add additional behavior without modifying the core Tangram source. To ease debugging, each file must independently be valid Scala source.",
     required = false,
-    default = Some(Nil)) map (_ map ExistingFile.apply)
+    default = Some(Nil))
+
+  // This indirection is apparently necessary to work around a Scallop bug:
+  // https://github.com/Rogach/scallop/issues/40
+  val extraSourceExistingFiles = extraSourceFiles map (_ map ExistingFile.apply)
 
   val refreshDelay = opt[Int](
     descr = "Time in seconds each tangram will remain on the screen.",
@@ -37,65 +41,63 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
 
   val archiveDirectory = opt[String](
     descr = "An optional save directory for downloaded images. This directory must already exist.",
-    required = false) map ExistingDirectory.apply
-}
+    required = false)
 
-/**
- * Holds files that exist and are actual files (not directories).
- */
-case class ExistingFile(file: File) {
-  require(file.isFile, s"${file} is not an existing file.")
-}
-
-object ExistingFile {
-  def apply(filename: String): ExistingFile = ExistingFile(new File(filename))
-
-  implicit def existingFile2File(self: ExistingFile) =
-    self.file
-}
-
-/**
- * Holds directories that exist and are actual directories (not files).
- */
-case class ExistingDirectory(directory: File) {
-  require(directory.isFile, s"${directory} is not an existing directory.")
-}
-
-object ExistingDirectory {
-  def apply(filename: String): ExistingDirectory =
-    ExistingDirectory(new File(filename))
-
-  implicit def existingDirectory2File(self: ExistingDirectory) =
-    self.directory
+  // This indirection is apparently necessary to work around a Scallop bug:
+  // https://github.com/Rogach/scallop/issues/40
+  val archiveExistingDirectory =
+    archiveDirectory map ExistingDirectory.apply
 }
 
 object Main {
   def validate(args: Conf) {
     // Make sure each extra source file is independently valid Scala code.
-    for (file <- args.extraSourceFiles.get.get) {
+    for (file <- args.extraSourceExistingFiles.get.get) {
       val source = FileUtils.readFileToString(file)
-      require(Eval.hasType[Any](source), s"${file} is not valid Scala source.")
+      try (Eval.typeCheck[Any](source))
+      catch {
+        case e: Any =>
+          println(s"${file} is not valid Scala source.")
+          throw e
+      }
+      //      require(Eval.hasType[Any](source), s"${file} is not valid Scala source.")
     }
+
+    def processSource(source: String): String =
+      source.addImports.include(args.extraSourceExistingFiles.get.get)
 
     // Make sure the ImageStream expression has an implicit view to ImageStream. 
     val imageStreamSource =
-      args.imageStream.get.get.addImports.include(args.extraSourceFiles.get.get)
-    require(
-      Eval.hasType[ImageStream](imageStreamSource),
-      s"${args.imageStream} does not have an implicit view to ImageStream.")
+      processSource(args.imageStream.get.get)
+    try (Eval.typeCheck[ImageStream](imageStreamSource))
+    catch {
+      case e: Any =>
+        println(s"${args.imageStream.get.get} does not have an implicit view to ImageStream.")
+        throw e
+    }
+    //    require(
+    //      Eval.hasType[ImageStream](imageStreamSource),
+    //      s"${args.imageStream} does not have an implicit view to ImageStream.")
 
     // Make sure the DisplayStyle expresssion has an implicit view
     // to DisplayStyle.
     val displayStyleSource =
-      args.style.get.get.addImports.include(args.extraSourceFiles.get.get)
-    require(
-      Eval.hasType[DisplayStyle[_, _]](displayStyleSource),
-      s"${args.style} does not have an implicit view to DisplayStyle.")
+      processSource(args.style.get.get)
+    try (Eval.typeCheck[DisplayStyle[_, _]](displayStyleSource))
+    catch {
+      case e: Any =>
+        println(s"${args.style.get.get} does not have an implicit view to DisplayStyle.")
+        throw e
+    }
+    //    require(
+    //      Eval.hasType[DisplayStyle[_, _]](displayStyleSource),
+    //      s"${args.style} does not have an implicit view to DisplayStyle.")
   }
 
   def main(unparsedArgs: Array[String]) {
     val args = new Conf(unparsedArgs)
     println(args.summary)
+    println(args.extraSourceExistingFiles)
     validate(args)
   }
 }
