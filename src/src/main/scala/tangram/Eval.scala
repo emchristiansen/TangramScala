@@ -5,6 +5,7 @@ import reflect.runtime.universe._
 import scala.tools.reflect.ToolBox
 import org.apache.commons.io.FileUtils
 import scala.util.{ Try, Success, Failure }
+import nebula._
 
 ///////////////////////////////////////////////////////////
 

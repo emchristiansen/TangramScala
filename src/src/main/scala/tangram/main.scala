@@ -1,8 +1,5 @@
 package tangram
 
-import com.frugalmechanic.optparse.StrOpt
-import com.frugalmechanic.optparse.IntOpt
-import com.frugalmechanic.optparse.OptParse
 import tangram.stream.ImageStream
 import tangram.style.DisplayStyle
 import java.io.File
@@ -11,7 +8,8 @@ import javax.imageio.ImageIO
 import java.text.SimpleDateFormat
 import org.rogach.scallop._
 import org.apache.commons.io.FileUtils
-import tangram.Eval._
+import nebula._
+//import tangram.Eval._
 
 ///////////////////////////////////////////////////////////
 
@@ -63,6 +61,8 @@ object Main {
       //      require(Eval.hasType[Any](source), s"${file} is not valid Scala source.")
     }
 
+    // TODO
+    implicit val imports = Imports("")
     def processSource(source: String): String =
       source.addImports.include(args.extraSourceExistingFiles.get.get)
 
