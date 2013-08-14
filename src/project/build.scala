@@ -15,20 +15,20 @@ object MainBuild extends Build {
     )
   )
 
-  val scalaVersionString = "2.10.1"
+  val scalaVersionString = "2.10.2"
 
   def extraLibraryDependencies = Seq(
     libraryDependencies ++= Seq(
-      "nebula" %% "nebula" % "0.1-SNAPSHOT",
+//      "nebula" %% "nebula" % "0.1-SNAPSHOT",
       //"org.scala-saddle" %% "saddle" % "1.1.+",
 //      "commons-lang" % "commons-lang" % "2.6",
       //"com.nativelibs4java" %% "scalaxy-debug" % "0.3-SNAPSHOT" % "provided",
-      "org.rogach" %% "scallop" % "0.9.1",
-      "org.apache.commons" % "commons-math3" % "3.2",
-      "commons-io" % "commons-io" % "2.4",
+      "org.rogach" %% "scallop" % "0.9.2",
+//      "org.apache.commons" % "commons-math3" % "3.2",
+//      "commons-io" % "commons-io" % "2.4",
       "org.scala-lang" % "scala-reflect" % scalaVersionString,
       "org.scala-lang" % "scala-compiler" % scalaVersionString,
-      "org.scala-lang" % "scala-actors" % scalaVersionString,
+//      "org.scala-lang" % "scala-actors" % scalaVersionString,
       //"org.imgscalr" % "imgscalr-lib" % "4.2",
 //      "org.apache.commons" % "commons-math" % "2.2",
 //      "commons-io" % "commons-io" % "2.3",
@@ -37,17 +37,18 @@ object MainBuild extends Build {
 //      "org.scalacheck" %% "scalacheck" % "1.10.0" % "test",
 //      "org.scala-tools" %% "scala-stm" % "0.6",
 //      "net.liftweb" % "lift-json_2.9.1" % "2.4-RC1",
-      "org.scalanlp" %% "breeze-math" % "0.2.3",
+//      "org.scalanlp" %% "breeze-math" % "0.2.3",
 //      "org.scalanlp" %% "breeze-learn" % "0.1",
 //      "org.scalanlp" %% "breeze-process" % "0.1",
 //      "org.scalanlp" %% "breeze-viz" % "0.1",
       "org.jsoup" % "jsoup" % "1.7.2",
       "rome" % "rome" % "1.0",
-      "com.googlecode.flickrj-android" % "flickrj-android" % "2.0.7",
+//      "com.googlecode.flickrj-android" % "flickrj-android" % "2.0.7",
       "org.json" % "json" % "20090211",
       "org.spire-math" %% "spire" % "0.4.0",
       "com.typesafe" %% "scalalogging-slf4j" % "1.0.1",
-      "com.chuusai" % "shapeless_2.10.0-RC5" % "1.2.4-SNAPSHOT"
+"com.sksamuel.scrimage" %% "scrimage-core" % "1.3.1"
+//      "com.chuusai" % "shapeless_2.10.0-RC5" % "1.2.4-SNAPSHOT"
 //      "org.slf4j" % "slf4j-api" % "1.6.6"
     )
   )
