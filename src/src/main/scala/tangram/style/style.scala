@@ -1,6 +1,6 @@
 package tangram.style
 
-import tangram.Wallpaper
+import tangram.style.Wallpaper
 
 ///////////////////////////////////////////////////////////
 

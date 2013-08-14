@@ -4,15 +4,30 @@ import scala.collection.immutable.Stream.consWrapper
 
 ///////////////////////////////////////////////////////////
 
-object PessimisticProcessor {  
-  implicit def PessimisticProcessor2ProcessPossibleImageURLs(
-    self: PessimisticProcessor.type): ProcessPossibleImageURLs =
-    possibleImageURLs => {
-      possibleImageURLs map {
-        case Right(ImageURL) => ImageURL
-        case Left => throw new Error
-      }
+/**
+ * A processor of PossibleImageURLs and PossibleImages that throws an exception
+ * at the first sign of trouble.
+ */
+object PessimisticProcessor extends ProcessPossibleImageURLs with ProcessPossibleImages {
+  override def apply(possibleImageURLs: PossibleImageURLs): ImageURLs =
+    possibleImageURLs map {
+      case Right(imageURL) => imageURL
+      case Left(_) => throw new Error
     }
+
+  override def apply(possibleImages: PossibleImages): Images =
+    possibleImages map {
+      case Right(image) => image
+      case Left(_) => throw new Error
+    }
+}
+
+/**
+ * A processor of PossibleImageURLs and PossibleImages that retries failed
+ * computations forever, waiting |waitTime| seconds between each attempt.
+ */
+case class OptimisticProcessor(waitTime: Seconds) extends ProcessPossibleImageURLs with ProcessPossibleImages {
+  
 }
 
 ///**
